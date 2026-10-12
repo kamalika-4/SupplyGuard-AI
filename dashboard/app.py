@@ -381,6 +381,7 @@ if page == "🏠 Mission Control":
         st.caption("Autonomous intelligence engine querying live shipment telemetry from **MongoDB (SupplyGuardDB)**, "
                    "running ML models (XGBoost, SHAP, EWS), and delivering verified evidence tables with prioritized actions.")
 
+        agent_k1, agent_k2, agent_k3, agent_k4 = st.columns(4)
         if mongo_info.get("cloud_mode"):
             agent_status_pill = f"<span class='sg-pill' style='color:{PALETTE['muted']}'>☁️ Cloud Mode: Live Telemetry</span>"
         elif mongo_ok:
