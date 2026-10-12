@@ -1,0 +1,348 @@
+{
+  "results": [
+    {
+      "Model": "Logistic Regression",
+      "Accuracy": 0.678,
+      "Precision": 0.6749,
+      "Recall": 0.678,
+      "F1_Score": 0.6748,
+      "ROC_AUC": 0.8496
+    },
+    {
+      "Model": "Random Forest",
+      "Accuracy": 0.67,
+      "Precision": 0.6781,
+      "Recall": 0.67,
+      "F1_Score": 0.6689,
+      "ROC_AUC": 0.8391
+    },
+    {
+      "Model": "Gradient Boosting",
+      "Accuracy": 0.662,
+      "Precision": 0.6601,
+      "Recall": 0.662,
+      "F1_Score": 0.6597,
+      "ROC_AUC": 0.8372
+    },
+    {
+      "Model": "XGBoost",
+      "Accuracy": 0.649,
+      "Precision": 0.6474,
+      "Recall": 0.649,
+      "F1_Score": 0.6478,
+      "ROC_AUC": 0.8285
+    },
+    {
+      "Model": "SVM (RBF)",
+      "Accuracy": 0.648,
+      "Precision": 0.6502,
+      "Recall": 0.648,
+      "F1_Score": 0.6472,
+      "ROC_AUC": 0.8385
+    },
+    {
+      "Model": "Decision Tree",
+      "Accuracy": 0.624,
+      "Precision": 0.625,
+      "Recall": 0.624,
+      "F1_Score": 0.6239,
+      "ROC_AUC": 0.7584
+    },
+    {
+      "Model": "KNN",
+      "Accuracy": 0.622,
+      "Precision": 0.6128,
+      "Recall": 0.622,
+      "F1_Score": 0.6067,
+      "ROC_AUC": 0.8028
+    }
+  ],
+  "best_model": "Logistic Regression",
+  "class_names": [
+    "High",
+    "Low",
+    "Medium"
+  ],
+  "confusion_matrix": [
+    [
+      122,
+      5,
+      75
+    ],
+    [
+      2,
+      369,
+      78
+    ],
+    [
+      47,
+      115,
+      187
+    ]
+  ],
+  "classification_report": {
+    "High": {
+      "precision": 0.7134502923976608,
+      "recall": 0.6039603960396039,
+      "f1-score": 0.6541554959785523,
+      "support": 202.0
+    },
+    "Low": {
+      "precision": 0.754601226993865,
+      "recall": 0.821826280623608,
+      "f1-score": 0.7867803837953091,
+      "support": 449.0
+    },
+    "Medium": {
+      "precision": 0.55,
+      "recall": 0.5358166189111748,
+      "f1-score": 0.5428156748911466,
+      "support": 349.0
+    },
+    "accuracy": 0.678,
+    "macro avg": {
+      "precision": 0.6726838397971754,
+      "recall": 0.6538677651914623,
+      "f1-score": 0.6612505182216694,
+      "support": 1000.0
+    },
+    "weighted avg": {
+      "precision": 0.6748829099845729,
+      "recall": 0.678,
+      "f1-score": 0.6748464730487714,
+      "support": 1000.0
+    }
+  },
+  "feature_importances": {
+    "Geo_Weather_Exposure": 0.14405273686035266,
+    "Geopolitical_Risk_Index": 0.0876699806749003,
+    "Weather_Risk_Index": 0.06441866577021575,
+    "Supplier_Weakness_Score": 0.053278186293431944,
+    "Logistics_Friction_Score": 0.04568604659673315,
+    "Port_Congestion_Index": 0.044589967042558395,
+    "Supplier_Reliability_Score": 0.0425486873317114,
+    "Concentration_Risk_Score": 0.04184957618280643,
+    "Financial_Stability_Score": 0.03873991664016683,
+    "Customs_Delay_Days": 0.034560670728040865,
+    "Historical_Instability_Score": 0.0334000180031548,
+    "Demand_Volatility_Score": 0.028672967714741517,
+    "On_Time_Delivery_Rate_Pct": 0.028341582513468033,
+    "Order_Quantity": 0.02701055107679592,
+    "Distance_KM": 0.026394147584042904,
+    "Fuel_Price_Index": 0.02620672933518704,
+    "Demand_Variability_Pct": 0.026185250664945835,
+    "Cost_Variance_Pct": 0.02561766924384284,
+    "Cost_Pressure_Score": 0.02524131344297442,
+    "Inventory_Level_Days": 0.02510937272454177,
+    "Contract_Flexibility_Score": 0.02505308996497311,
+    "Region_enc": 0.024269648053382453,
+    "Lead_Time_Days": 0.02258314296842218,
+    "Product_Category_enc": 0.01557829957894284,
+    "Disruption_Events_Past_Year": 0.015287430941366914,
+    "Supplier_Tier_enc": 0.010382069485843054,
+    "Single_Sourcing_Flag": 0.008829566050855968,
+    "Transport_Mode_enc": 0.008442716531600588
+  },
+  "xgboost_confusion_matrix": [
+    [
+      119,
+      9,
+      74
+    ],
+    [
+      5,
+      349,
+      95
+    ],
+    [
+      60,
+      108,
+      181
+    ]
+  ],
+  "xgboost_classification_report": {
+    "High": {
+      "precision": 0.6467391304347826,
+      "recall": 0.5891089108910891,
+      "f1-score": 0.616580310880829,
+      "support": 202.0
+    },
+    "Low": {
+      "precision": 0.7489270386266095,
+      "recall": 0.77728285077951,
+      "f1-score": 0.7628415300546448,
+      "support": 449.0
+    },
+    "Medium": {
+      "precision": 0.5171428571428571,
+      "recall": 0.5186246418338109,
+      "f1-score": 0.5178826895565093,
+      "support": 349.0
+    },
+    "accuracy": 0.649,
+    "macro avg": {
+      "precision": 0.6376030087347497,
+      "recall": 0.6283388011681367,
+      "f1-score": 0.6324348434973278,
+      "support": 1000.0
+    },
+    "weighted avg": {
+      "precision": 0.6473924018340309,
+      "recall": 0.649,
+      "f1-score": 0.6478061284476847,
+      "support": 1000.0
+    }
+  },
+  "xgboost_feature_importances": {
+    "Geo_Weather_Exposure": 0.1893,
+    "Supplier_Weakness_Score": 0.0705,
+    "Single_Sourcing_Flag": 0.0476,
+    "Logistics_Friction_Score": 0.0454,
+    "Port_Congestion_Index": 0.044,
+    "Concentration_Risk_Score": 0.0434,
+    "Historical_Instability_Score": 0.0376,
+    "Supplier_Tier_enc": 0.033,
+    "Supplier_Reliability_Score": 0.0313,
+    "Customs_Delay_Days": 0.0301,
+    "Transport_Mode_enc": 0.0291,
+    "Disruption_Events_Past_Year": 0.0285,
+    "On_Time_Delivery_Rate_Pct": 0.0274,
+    "Financial_Stability_Score": 0.027,
+    "Demand_Variability_Pct": 0.0252,
+    "Demand_Volatility_Score": 0.0247,
+    "Geopolitical_Risk_Index": 0.0243,
+    "Region_enc": 0.0239,
+    "Distance_KM": 0.0235,
+    "Fuel_Price_Index": 0.0233,
+    "Weather_Risk_Index": 0.0232,
+    "Contract_Flexibility_Score": 0.0231,
+    "Lead_Time_Days": 0.0231,
+    "Cost_Variance_Pct": 0.0216,
+    "Inventory_Level_Days": 0.0209,
+    "Cost_Pressure_Score": 0.0208,
+    "Order_Quantity": 0.0202,
+    "Product_Category_enc": 0.0179
+  },
+  "xgboost_shap_importance": {
+    "Geo_Weather_Exposure": 0.773,
+    "Concentration_Risk_Score": 0.2464,
+    "Port_Congestion_Index": 0.2361,
+    "Supplier_Weakness_Score": 0.2356,
+    "Historical_Instability_Score": 0.1822,
+    "Logistics_Friction_Score": 0.1599,
+    "Weather_Risk_Index": 0.1591,
+    "Geopolitical_Risk_Index": 0.1546,
+    "Customs_Delay_Days": 0.1439,
+    "Supplier_Reliability_Score": 0.1301,
+    "Financial_Stability_Score": 0.1197,
+    "Demand_Volatility_Score": 0.0828,
+    "Demand_Variability_Pct": 0.0753,
+    "Fuel_Price_Index": 0.0729,
+    "Lead_Time_Days": 0.07,
+    "Order_Quantity": 0.0651,
+    "Distance_KM": 0.0619,
+    "Cost_Variance_Pct": 0.0544,
+    "Inventory_Level_Days": 0.0484,
+    "Single_Sourcing_Flag": 0.0429,
+    "Product_Category_enc": 0.0389,
+    "Cost_Pressure_Score": 0.0358,
+    "On_Time_Delivery_Rate_Pct": 0.0356,
+    "Region_enc": 0.0321,
+    "Contract_Flexibility_Score": 0.0293,
+    "Supplier_Tier_enc": 0.0219,
+    "Transport_Mode_enc": 0.0195,
+    "Disruption_Events_Past_Year": 0.0164
+  },
+  "xgboost_shap_per_class": {
+    "High": {
+      "Geo_Weather_Exposure": 1.2152,
+      "Concentration_Risk_Score": 0.3488,
+      "Supplier_Weakness_Score": 0.3466,
+      "Logistics_Friction_Score": 0.3296,
+      "Port_Congestion_Index": 0.3125,
+      "Historical_Instability_Score": 0.2899,
+      "Weather_Risk_Index": 0.2102,
+      "Geopolitical_Risk_Index": 0.2044,
+      "Financial_Stability_Score": 0.1998,
+      "Customs_Delay_Days": 0.1707,
+      "Supplier_Reliability_Score": 0.1434,
+      "Single_Sourcing_Flag": 0.1224,
+      "Demand_Variability_Pct": 0.1059,
+      "Fuel_Price_Index": 0.0951,
+      "Order_Quantity": 0.0756,
+      "Distance_KM": 0.0739,
+      "Demand_Volatility_Score": 0.0739,
+      "Lead_Time_Days": 0.067,
+      "Inventory_Level_Days": 0.0569,
+      "Supplier_Tier_enc": 0.0527,
+      "Product_Category_enc": 0.0526,
+      "Cost_Variance_Pct": 0.0506,
+      "Transport_Mode_enc": 0.0451,
+      "On_Time_Delivery_Rate_Pct": 0.0441,
+      "Cost_Pressure_Score": 0.037,
+      "Contract_Flexibility_Score": 0.0363,
+      "Disruption_Events_Past_Year": 0.0303,
+      "Region_enc": 0.0225
+    },
+    "Low": {
+      "Geo_Weather_Exposure": 0.8143,
+      "Concentration_Risk_Score": 0.343,
+      "Port_Congestion_Index": 0.339,
+      "Supplier_Weakness_Score": 0.2707,
+      "Historical_Instability_Score": 0.2137,
+      "Geopolitical_Risk_Index": 0.2019,
+      "Customs_Delay_Days": 0.1945,
+      "Supplier_Reliability_Score": 0.1891,
+      "Weather_Risk_Index": 0.171,
+      "Logistics_Friction_Score": 0.1168,
+      "Financial_Stability_Score": 0.1116,
+      "Demand_Volatility_Score": 0.083,
+      "Demand_Variability_Pct": 0.0789,
+      "Lead_Time_Days": 0.0658,
+      "Distance_KM": 0.0625,
+      "Fuel_Price_Index": 0.0436,
+      "Inventory_Level_Days": 0.0406,
+      "Order_Quantity": 0.0368,
+      "Region_enc": 0.0365,
+      "Product_Category_enc": 0.0319,
+      "On_Time_Delivery_Rate_Pct": 0.0307,
+      "Cost_Variance_Pct": 0.0306,
+      "Contract_Flexibility_Score": 0.0276,
+      "Cost_Pressure_Score": 0.0274,
+      "Transport_Mode_enc": 0.0091,
+      "Disruption_Events_Past_Year": 0.0082,
+      "Supplier_Tier_enc": 0.0066,
+      "Single_Sourcing_Flag": 0.0053
+    },
+    "Medium": {
+      "Geo_Weather_Exposure": 0.2894,
+      "Weather_Risk_Index": 0.0959,
+      "Demand_Volatility_Score": 0.0914,
+      "Supplier_Weakness_Score": 0.0894,
+      "Order_Quantity": 0.0831,
+      "Cost_Variance_Pct": 0.082,
+      "Fuel_Price_Index": 0.0801,
+      "Lead_Time_Days": 0.0772,
+      "Customs_Delay_Days": 0.0666,
+      "Supplier_Reliability_Score": 0.0579,
+      "Geopolitical_Risk_Index": 0.0575,
+      "Port_Congestion_Index": 0.0566,
+      "Distance_KM": 0.0493,
+      "Financial_Stability_Score": 0.0477,
+      "Inventory_Level_Days": 0.0476,
+      "Concentration_Risk_Score": 0.0475,
+      "Historical_Instability_Score": 0.0431,
+      "Cost_Pressure_Score": 0.0429,
+      "Demand_Variability_Pct": 0.0411,
+      "Region_enc": 0.0375,
+      "Logistics_Friction_Score": 0.0331,
+      "Product_Category_enc": 0.0322,
+      "On_Time_Delivery_Rate_Pct": 0.0318,
+      "Contract_Flexibility_Score": 0.0242,
+      "Disruption_Events_Past_Year": 0.0109,
+      "Supplier_Tier_enc": 0.0063,
+      "Transport_Mode_enc": 0.0044,
+      "Single_Sourcing_Flag": 0.001
+    }
+  }
+}
