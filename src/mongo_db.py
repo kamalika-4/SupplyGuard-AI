@@ -60,6 +60,16 @@ def sanitize_for_mongo(val: Any) -> Any:
 _CLIENTS: Dict[Tuple[str, int], Any] = {}
 
 
+def get_candidate_uris(uri: str) -> List[str]:
+    """Generates candidate URIs to gracefully bridge IPv4/IPv6 loopback bindings on Windows."""
+    candidates = [uri]
+    if "localhost" in uri:
+        candidates.append(uri.replace("localhost", "127.0.0.1"))
+    elif "127.0.0.1" in uri:
+        candidates.append(uri.replace("127.0.0.1", "localhost"))
+    return candidates
+
+
 def get_mongo_client(uri: Optional[str] = None, timeout_ms: int = 2000):
     """Returns a cached MongoClient instance with low serverSelectionTimeoutMS for responsive fallback."""
     if not PYMONGO_AVAILABLE:
@@ -68,14 +78,31 @@ def get_mongo_client(uri: Optional[str] = None, timeout_ms: int = 2000):
     cache_key = (uri, timeout_ms)
     client = _CLIENTS.get(cache_key)
     if client is not None:
-        return client
+        try:
+            client.admin.command("ping")
+            return client
+        except Exception:
+            _CLIENTS.pop(cache_key, None)
+            try:
+                client.close()
+            except Exception:
+                pass
 
-    try:
-        new_client = pymongo.MongoClient(uri, serverSelectionTimeoutMS=timeout_ms, connectTimeoutMS=timeout_ms)
-        _CLIENTS[cache_key] = new_client
-        return new_client
-    except Exception:
-        return None
+    candidates = get_candidate_uris(uri)
+    for cand in candidates:
+        try:
+            new_client = pymongo.MongoClient(cand, serverSelectionTimeoutMS=timeout_ms, connectTimeoutMS=timeout_ms)
+            new_client.admin.command("ping")
+            _CLIENTS[cache_key] = new_client
+            return new_client
+        except Exception:
+            try:
+                new_client.close()
+            except Exception:
+                pass
+            continue
+
+    return None
 
 
 def close_mongo_clients():
@@ -103,16 +130,15 @@ def check_mongo_connection(
     uri = uri or DEFAULT_MONGO_URI
     db_name = db_name or DEFAULT_DB_NAME
 
+    db, err = get_database_with_error(uri, db_name, timeout_ms=timeout_ms)
+    if db is None:
+        return False, {"uri": uri, "database": db_name, "status": "Offline"}, err or "Server is unreachable."
+
     try:
-        client = get_mongo_client(uri, timeout_ms=timeout_ms)
-        if client is None:
-            return False, {}, "Failed to create MongoClient."
-        # Ping the server
-        client.admin.command("ping")
+        client = db.client
         server_info = client.server_info()
-        db = client[db_name]
         collections = db.list_collection_names()
-        
+
         # Count documents safely
         shipments_count = db[SHIPMENTS_COLLECTION].count_documents({}) if SHIPMENTS_COLLECTION in collections else 0
         predictions_count = db[PREDICTIONS_COLLECTION].count_documents({}) if PREDICTIONS_COLLECTION in collections else 0
@@ -128,13 +154,6 @@ def check_mongo_connection(
         }
         return True, info, None
     except Exception as e:
-        cache_key = (uri, timeout_ms)
-        failed_client = _CLIENTS.pop(cache_key, None)
-        if failed_client:
-            try:
-                failed_client.close()
-            except Exception:
-                pass
         return False, {"uri": uri, "database": db_name, "status": "Offline"}, str(e)
 
 
@@ -148,21 +167,38 @@ def get_database_with_error(
         return None, "pymongo package is not installed."
     uri = uri or DEFAULT_MONGO_URI
     db_name = db_name or DEFAULT_DB_NAME
-    try:
-        client = get_mongo_client(uri, timeout_ms=timeout_ms)
-        if client is None:
-            return None, f"Failed to initialize MongoClient for '{uri}'."
-        client.admin.command("ping")
-        return client[db_name], None
-    except Exception as e:
-        cache_key = (uri, timeout_ms)
-        failed_client = _CLIENTS.pop(cache_key, None)
-        if failed_client:
-            try:
-                failed_client.close()
-            except Exception:
-                pass
-        return None, str(e)
+
+    candidates = get_candidate_uris(uri)
+    last_err = None
+
+    for cand in candidates:
+        cache_key = (cand, timeout_ms)
+        try:
+            client = get_mongo_client(cand, timeout_ms=timeout_ms)
+            if client is None:
+                continue
+            client.admin.command("ping")
+            return client[db_name], None
+        except Exception as e:
+            last_err = e
+            failed_client = _CLIENTS.pop(cache_key, None)
+            if failed_client:
+                try:
+                    failed_client.close()
+                except Exception:
+                    pass
+
+    _CLIENTS.pop((uri, timeout_ms), None)
+
+    err_str = str(last_err) if last_err else f"Failed to initialize MongoClient for '{uri}'."
+    if "Connection refused" in err_str or "111" in err_str or "10061" in err_str:
+        friendly_err = (
+            f"Connection to MongoDB on port 27017 refused. The local MongoDB service is currently stopped. "
+            f"Start MongoDB via terminal ('net start MongoDB') or Windows Services, then retry."
+        )
+        return None, friendly_err
+
+    return None, err_str
 
 
 def get_database(uri: Optional[str] = None, db_name: Optional[str] = None, timeout_ms: int = 2000):

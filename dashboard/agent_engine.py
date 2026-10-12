@@ -604,17 +604,24 @@ class SupplyChainDataToActionAgent:
         for p in preds:
             prob_dict = p.get("prediction_probabilities", {})
             p_high = f"{prob_dict.get('High', 0.0)*100:.1f}%" if isinstance(prob_dict, dict) and "High" in prob_dict else "N/A"
+            ews_val = p.get("early_warning_score")
+            try:
+                ews_clean = round(float(ews_val), 1) if ews_val is not None and ews_val != "N/A" else np.nan
+            except (ValueError, TypeError):
+                ews_clean = np.nan
             rows.append({
                 "Shipment_ID": p.get("shipment_id", "N/A"),
                 "Predicted_Risk": p.get("predicted_risk_level", "N/A"),
                 "Model": p.get("model_name", "N/A"),
                 "P(High)": p_high,
-                "EWS_Score": p.get("early_warning_score", "N/A"),
+                "EWS_Score": ews_clean,
                 "EWS_Band": p.get("ews_band", "N/A"),
                 "Timestamp": p.get("timestamp") or p.get("prediction_timestamp") or p.get("created_at", "N/A"),
             })
 
         evidence_df = pd.DataFrame(rows)
+        if not evidence_df.empty and "EWS_Score" in evidence_df.columns:
+            evidence_df["EWS_Score"] = pd.to_numeric(evidence_df["EWS_Score"], errors="coerce")
         risk_counts = evidence_df["Predicted_Risk"].value_counts().to_dict()
 
         summary = (

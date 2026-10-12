@@ -299,7 +299,7 @@ if page == "🏠 Mission Control":
                 marker=dict(colors=[RISK_COLOR[r] for r in ORDER]),
                 textinfo="label+percent"))
             fig = plotly_theme(fig, height=360)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         with col2:
             st.markdown("#### Early Warning Bands by Region")
@@ -310,7 +310,7 @@ if page == "🏠 Mission Control":
                 fig.add_bar(name=band, x=band_region.index, y=band_region[band], marker_color=BAND_COLOR[band])
             fig.update_layout(barmode="stack")
             fig = plotly_theme(fig, height=360)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         col3, col4 = st.columns(2)
         with col3:
@@ -320,7 +320,7 @@ if page == "🏠 Mission Control":
                          color_continuous_scale=["#2DD4BF", "#FFC94D", "#FF5A5F"])
             fig.update_layout(showlegend=False, coloraxis_showscale=False, xaxis_title="Avg Early Warning Score", yaxis_title="")
             fig = plotly_theme(fig, height=380)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         with col4:
             st.markdown("#### Disruption Events vs On-Time Delivery")
@@ -329,7 +329,7 @@ if page == "🏠 Mission Control":
                               color="Risk_Level", color_discrete_map=RISK_COLOR, opacity=0.7,
                               category_orders={"Risk_Level": ORDER})
             fig = plotly_theme(fig, height=380)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         st.markdown(
             f"""<div class='sg-card'><span class='sg-eyebrow'>SYSTEM STATUS</span><br>
@@ -355,14 +355,14 @@ if page == "🏠 Mission Control":
         st.markdown("##### 💡 Suggested Questions & Quick Actions")
         prompt_col1, prompt_col2, prompt_col3 = st.columns(3)
         with prompt_col1:
-            q_p1 = st.button("🚨 Triage Top Critical & High-Risk Shipments", use_container_width=True)
-            q_p2 = st.button("🔍 Deep-Dive Diagnostic for SG02088", use_container_width=True)
+            q_p1 = st.button("🚨 Triage Top Critical & High-Risk Shipments", width="stretch")
+            q_p2 = st.button("🔍 Deep-Dive Diagnostic for SG02088", width="stretch")
         with prompt_col2:
-            q_p3 = st.button("🚢 Compare Sea vs Air Transit Risk & Lead Times", use_container_width=True)
-            q_p4 = st.button("🏭 Evaluate Supplier Tiers & Single-Sourcing Penalty", use_container_width=True)
+            q_p3 = st.button("🚢 Compare Sea vs Air Transit Risk & Lead Times", width="stretch")
+            q_p4 = st.button("🏭 Evaluate Supplier Tiers & Single-Sourcing Penalty", width="stretch")
         with prompt_col3:
-            q_p5 = st.button("🌍 Global Regional Disruption Hotspots", use_container_width=True)
-            q_p6 = st.button("📜 Audit Recent Predictions Logged in MongoDB", use_container_width=True)
+            q_p5 = st.button("🌍 Global Regional Disruption Hotspots", width="stretch")
+            q_p6 = st.button("📜 Audit Recent Predictions Logged in MongoDB", width="stretch")
 
         selected_prompt = ""
         if q_p1:
@@ -389,7 +389,7 @@ if page == "🏠 Mission Control":
                 key="agent_nl_input",
             )
         with qc_btn:
-            ask_clicked = st.button("⚡ Ask Agent", type="primary", use_container_width=True)
+            ask_clicked = st.button("⚡ Ask Agent", type="primary", width="stretch")
 
         active_query = user_query if (ask_clicked or selected_prompt) else ""
 
@@ -407,7 +407,7 @@ if page == "🏠 Mission Control":
             # Evidence Table
             if response.evidence_df is not None and not response.evidence_df.empty:
                 st.markdown("##### 📊 Factual Evidence Table (Verified Live Data)")
-                st.dataframe(response.evidence_df, use_container_width=True)
+                st.dataframe(response.evidence_df, width="stretch")
                 st.download_button(
                     "⬇️ Export Evidence Data (CSV)",
                     response.evidence_df.to_csv(index=False),
@@ -466,17 +466,17 @@ elif page == "📊 Preprocessing & EDA":
         t1, t2, t3, t4 = st.tabs(["Raw Data", "Preprocessed Data", "Feature-Engineered Data", "📈 Before vs After Metrics"])
         with t1:
             st.markdown(f"**Shape:** {raw_df.shape[0]:,} rows × {raw_df.shape[1]} columns — contains injected missing values & duplicate records.")
-            st.dataframe(raw_df.head(200), use_container_width=True, height=380)
+            st.dataframe(raw_df.head(200), width="stretch", height=380)
         with t2:
             st.markdown(f"**Shape:** {pre_df.shape[0]:,} rows × {pre_df.shape[1]} columns — after duplicate removal, median/mode imputation, and defensive range clipping.")
-            st.dataframe(pre_df.head(200), use_container_width=True, height=380)
+            st.dataframe(pre_df.head(200), width="stretch", height=380)
         with t3:
             st.markdown(f"**Shape:** {fe_df.shape[0]:,} rows × {fe_df.shape[1]} columns — engineered 7 composite risk scores, Early Warning Score, and EWS bands.")
-            st.dataframe(fe_df.head(200), use_container_width=True, height=380)
+            st.dataframe(fe_df.head(200), width="stretch", height=380)
         with t4:
             comp_df = pd.DataFrame({"Raw": stats_raw, "Preprocessed": stats_pre, "Feature-Engineered": stats_fe})
             st.markdown("##### Data-Quality Summary Table")
-            st.dataframe(comp_df, use_container_width=True)
+            st.dataframe(comp_df, width="stretch")
 
             c1, c2 = st.columns(2)
             with c1:
@@ -485,14 +485,14 @@ elif page == "📊 Preprocessing & EDA":
                 fig = px.bar(mv, x="Stage", y="Missing Values", color="Stage",
                              color_discrete_sequence=[PALETTE["critical"], PALETTE["watch"], PALETTE["safe"]])
                 fig.update_layout(title="Missing Values — Before vs After", showlegend=False)
-                st.plotly_chart(plotly_theme(fig, height=340), use_container_width=True)
+                st.plotly_chart(plotly_theme(fig, height=340), width="stretch")
             with c2:
                 dv = pd.DataFrame({"Stage": ["Raw", "Preprocessed", "Feature-Engineered"],
                                     "Duplicate Rows": [stats_raw["Duplicate Rows"], stats_pre["Duplicate Rows"], stats_fe["Duplicate Rows"]]})
                 fig = px.bar(dv, x="Stage", y="Duplicate Rows", color="Stage",
                              color_discrete_sequence=[PALETTE["critical"], PALETTE["watch"], PALETTE["safe"]])
                 fig.update_layout(title="Duplicate Rows — Before vs After", showlegend=False)
-                st.plotly_chart(plotly_theme(fig, height=340), use_container_width=True)
+                st.plotly_chart(plotly_theme(fig, height=340), width="stretch")
 
             st.success(f"Preprocessing removed **{stats_raw['Duplicate Rows']:,} → {stats_pre['Duplicate Rows']:,}** duplicate rows and "
                        f"**{stats_raw['Missing Values']:,} → {stats_pre['Missing Values']:,}** missing values, while feature engineering added "
@@ -509,7 +509,7 @@ elif page == "📊 Preprocessing & EDA":
             fig = px.bar(x=vc.index, y=vc.values, color=vc.index, color_discrete_map=RISK_COLOR,
                          labels={"x": "Risk Level", "y": "Count"})
             fig.update_layout(title="1. Ground-Truth Risk Level Distribution", showlegend=False)
-            st.plotly_chart(plotly_theme(fig, height=360), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig, height=360), width="stretch")
         with e2:
             region_risk = pd.crosstab(fe_df["Region"], fe_df["Risk_Level"], normalize="index")[ORDER] * 100
             region_risk = region_risk.sort_values("High", ascending=False)
@@ -517,7 +517,7 @@ elif page == "📊 Preprocessing & EDA":
             for r in ORDER:
                 fig.add_bar(name=r, x=region_risk.index, y=region_risk[r], marker_color=RISK_COLOR[r])
             fig.update_layout(barmode="stack", title="2. Risk Composition by Region (%)", yaxis_title="% of Shipments")
-            st.plotly_chart(plotly_theme(fig, height=360), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig, height=360), width="stretch")
 
         e3, e4 = st.columns(2)
         with e3:
@@ -528,12 +528,12 @@ elif page == "📊 Preprocessing & EDA":
             corr = fe_df[key_cols].corr()
             fig = px.imshow(corr, text_auto=".2f", color_continuous_scale="RdBu_r", zmin=-1, zmax=1, aspect="auto")
             fig.update_layout(title="3. Correlation Heatmap — Key Risk Drivers")
-            st.plotly_chart(plotly_theme(fig, height=440), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig, height=440), width="stretch")
         with e4:
             fig = px.box(fe_df, x="Risk_Level", y="Early_Warning_Score", color="Risk_Level",
                          color_discrete_map=RISK_COLOR, category_orders={"Risk_Level": ORDER})
             fig.update_layout(title="4. Early Warning Score by Risk Level", showlegend=False)
-            st.plotly_chart(plotly_theme(fig, height=440), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig, height=440), width="stretch")
 
         e5, e6 = st.columns(2)
         with e5:
@@ -541,7 +541,7 @@ elif page == "📊 Preprocessing & EDA":
             fig = px.bar(x=tm.index, y=tm.values, color=tm.values, color_continuous_scale="OrRd",
                          labels={"x": "Transport Mode", "y": "Avg Disruption Events"})
             fig.update_layout(title="5. Avg Disruption Events by Transport Mode", showlegend=False, coloraxis_showscale=False)
-            st.plotly_chart(plotly_theme(fig, height=380), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig, height=380), width="stretch")
         with e6:
             cat_ews = fe_df.groupby("Product_Category")["Early_Warning_Score"].mean().sort_values(ascending=False)
             fig = px.bar(x=cat_ews.index, y=cat_ews.values, color=cat_ews.values,
@@ -549,7 +549,7 @@ elif page == "📊 Preprocessing & EDA":
                          labels={"x": "Product Category", "y": "Avg Early Warning Score"})
             fig.update_layout(title="6. Avg Early Warning Score by Product Category", showlegend=False,
                                coloraxis_showscale=False, xaxis_tickangle=-30)
-            st.plotly_chart(plotly_theme(fig, height=380), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig, height=380), width="stretch")
 
     # TAB 3: Deep-Dive Distributions & Filters
     with p_tabs[2]:
@@ -576,28 +576,28 @@ elif page == "📊 Preprocessing & EDA":
             fig = px.histogram(fdf, x="Early_Warning_Score", color="Risk_Level", nbins=40,
                                 color_discrete_map=RISK_COLOR, category_orders={"Risk_Level": ORDER})
             fig.update_layout(title="Early Warning Score Distribution by Risk Level")
-            st.plotly_chart(plotly_theme(fig), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig), width="stretch")
         with d2:
             fig = px.box(fdf, x="Risk_Level", y="On_Time_Delivery_Rate_Pct", color="Risk_Level",
                          color_discrete_map=RISK_COLOR, category_orders={"Risk_Level": ORDER})
             fig.update_layout(title="On-Time Delivery Rate by Risk Level", showlegend=False)
-            st.plotly_chart(plotly_theme(fig), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig), width="stretch")
 
         d3, d4 = st.columns(2)
         with d3:
             fig = px.histogram(fdf, x="Lead_Time_Days", color="Transport_Mode", nbins=30)
             fig.update_layout(title="Lead Time Distribution by Transport Mode")
-            st.plotly_chart(plotly_theme(fig), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig), width="stretch")
         with d4:
             fig = px.violin(fdf, x="Supplier_Tier", y="Supplier_Reliability_Score", color="Supplier_Tier", box=True)
             fig.update_layout(title="Supplier Reliability Score by Tier", showlegend=False)
-            st.plotly_chart(plotly_theme(fig), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig), width="stretch")
 
     # TAB 4: Filtered Data Table & Export
     with p_tabs[3]:
         st.markdown("#### Live Filtered Dataset & CSV Export")
         st.caption("Inspect individual shipment records with their computed Early Warning Scores and composite drivers.")
-        st.dataframe(fdf.head(500), use_container_width=True, height=450)
+        st.dataframe(fdf.head(500), width="stretch", height=450)
         st.download_button(
             "⬇️ Download Filtered Supply Chain Data (CSV)",
             fdf.to_csv(index=False),
@@ -632,7 +632,7 @@ elif page == "📊 Preprocessing & EDA":
                 data=sample_csv_bytes,
                 file_name="supplyguard_shipment_template.csv",
                 mime="text/csv",
-                use_container_width=True,
+                width="stretch",
                 help="Download a pre-formatted 5-row CSV template matching SupplyGuard AI requirements."
             )
 
@@ -687,7 +687,7 @@ elif page == "📊 Preprocessing & EDA":
                 with prev_m4:
                     st.metric("Duplicate Rows", f"{dupe_total:,}", delta_color="inverse")
 
-                st.dataframe(df_custom_raw.head(100), use_container_width=True, height=260)
+                st.dataframe(df_custom_raw.head(100), width="stretch", height=260)
 
                 # SECTION 2: SCHEMA VALIDATION & COMPATIBILITY
                 st.markdown("##### 2️⃣ 🛡️ Feature Schema Validation & Model Compatibility")
@@ -791,7 +791,7 @@ elif page == "📊 Preprocessing & EDA":
                         f"Final preprocessed dataset: **{clean_meta.get('rows_after', len(clean_df)):,}** rows × **{clean_df.shape[1]}** features."
                     )
 
-                st.dataframe(clean_df.head(100), use_container_width=True, height=260)
+                st.dataframe(clean_df.head(100), width="stretch", height=260)
                 st.download_button(
                     "⬇️ Download Cleaned & Feature-Engineered Dataset (CSV)",
                     clean_df.to_csv(index=False),
@@ -813,7 +813,7 @@ elif page == "📊 Preprocessing & EDA":
                         fig_ews.add_vline(x=35, line_dash="dash", line_color=PALETTE["safe"], annotation_text="Safe")
                         fig_ews.add_vline(x=60, line_dash="dash", line_color=PALETTE["watch"], annotation_text="Watch")
                         fig_ews.add_vline(x=80, line_dash="dash", line_color=PALETTE["critical"], annotation_text="Critical")
-                        st.plotly_chart(plotly_theme(fig_ews, height=320), use_container_width=True)
+                        st.plotly_chart(plotly_theme(fig_ews, height=320), width="stretch")
                 with eda_c2:
                     if "EWS_Band" in clean_df.columns:
                         band_order = ["Safe", "Watch", "Elevated", "Critical"]
@@ -827,7 +827,7 @@ elif page == "📊 Preprocessing & EDA":
                             labels={"x": "EWS Band", "y": "Shipments"},
                         )
                         fig_band.update_layout(showlegend=False)
-                        st.plotly_chart(plotly_theme(fig_band, height=320), use_container_width=True)
+                        st.plotly_chart(plotly_theme(fig_band, height=320), width="stretch")
 
                 eda_c3, eda_c4 = st.columns(2)
                 with eda_c3:
@@ -839,7 +839,7 @@ elif page == "📊 Preprocessing & EDA":
                             color="Lead_Time_Days",
                             color_continuous_scale="Blues",
                         )
-                        st.plotly_chart(plotly_theme(fig_reg, height=320), use_container_width=True)
+                        st.plotly_chart(plotly_theme(fig_reg, height=320), width="stretch")
                 with eda_c4:
                     if "Supplier_Reliability_Score" in clean_df.columns and "Financial_Stability_Score" in clean_df.columns:
                         fig_supp = px.scatter(
@@ -849,7 +849,7 @@ elif page == "📊 Preprocessing & EDA":
                             title="Supplier Reliability vs Financial Health",
                             hover_data=["Shipment_ID"] if "Shipment_ID" in clean_df.columns else None,
                         )
-                        st.plotly_chart(plotly_theme(fig_supp, height=320), use_container_width=True)
+                        st.plotly_chart(plotly_theme(fig_supp, height=320), width="stretch")
 
                 # Composite Drivers Bar Chart
                 comp_cols = [k for k in EWS_WEIGHTS if k in clean_df.columns]
@@ -862,7 +862,7 @@ elif page == "📊 Preprocessing & EDA":
                         color="Average Score (0-100)",
                         color_continuous_scale="Reds",
                     )
-                    st.plotly_chart(plotly_theme(fig_comp, height=300), use_container_width=True)
+                    st.plotly_chart(plotly_theme(fig_comp, height=300), width="stretch")
 
                 # SECTION 5: BATCH XGBOOST RISK PREDICTIONS
                 st.markdown("##### 5️⃣ 🔮 Batch Disruption Risk Predictions (XGBoost Classifier)")
@@ -873,7 +873,7 @@ elif page == "📊 Preprocessing & EDA":
 
                     pred_c_btn, pred_c_info = st.columns([1.5, 2.5])
                     with pred_c_btn:
-                        btn_batch_pred = st.button("🚀 Run Batch XGBoost Predictions", type="primary", use_container_width=True, key="btn_run_batch_xgb")
+                        btn_batch_pred = st.button("🚀 Run Batch XGBoost Predictions", type="primary", width="stretch", key="btn_run_batch_xgb")
 
                     if btn_batch_pred or ("uploaded_predicted_df" in st.session_state):
                         if btn_batch_pred or ("uploaded_predicted_df" not in st.session_state):
@@ -911,7 +911,7 @@ elif page == "📊 Preprocessing & EDA":
                                 title="Predicted Disruption Risk Level Distribution"
                             )
                             fig_pred_bar.update_layout(showlegend=False)
-                            st.plotly_chart(plotly_theme(fig_pred_bar, height=300), use_container_width=True)
+                            st.plotly_chart(plotly_theme(fig_pred_bar, height=300), width="stretch")
 
                         with pred_viz2:
                             fig_prob_hist = px.histogram(
@@ -919,7 +919,7 @@ elif page == "📊 Preprocessing & EDA":
                                 title="High Disruption Probability Distribution P(High)",
                                 color_discrete_sequence=[PALETTE["critical"]]
                             )
-                            st.plotly_chart(plotly_theme(fig_prob_hist, height=300), use_container_width=True)
+                            st.plotly_chart(plotly_theme(fig_prob_hist, height=300), width="stretch")
 
                         # Display Table with Filter
                         st.markdown("##### 📋 Batch Scored Shipments Table")
@@ -936,7 +936,7 @@ elif page == "📊 Preprocessing & EDA":
                         ] if c in scored_df.columns]
 
                         table_df = scored_df[scored_df["Predicted_Risk_Level"].isin(filter_risk)][disp_cols]
-                        st.dataframe(table_df, use_container_width=True, height=340)
+                        st.dataframe(table_df, width="stretch", height=340)
 
                         # Action Buttons: Download & Save to MongoDB
                         act_c1, act_c2 = st.columns(2)
@@ -946,14 +946,14 @@ elif page == "📊 Preprocessing & EDA":
                                 scored_df.to_csv(index=False),
                                 f"predictions_{uploaded_file.name}",
                                 mime="text/csv",
-                                use_container_width=True,
+                                width="stretch",
                                 key="dl_predictions_csv"
                             )
                         with act_c2:
                             btn_save_batch_mongo = st.button(
                                 "💾 Persist All Predictions to MongoDB",
                                 type="primary",
-                                use_container_width=True,
+                                width="stretch",
                                 key="btn_save_batch_mongo"
                             )
 
@@ -1034,7 +1034,7 @@ elif page == "🧠 Model Lab":
 
         st.dataframe(
             res_df.style.background_gradient(subset=["Accuracy", "F1_Score", "ROC_AUC"], cmap="Blues"),
-            use_container_width=True,
+            width="stretch",
         )
 
         c1, c2 = st.columns(2)
@@ -1042,12 +1042,12 @@ elif page == "🧠 Model Lab":
             fig = px.bar(res_df.sort_values("F1_Score"), x="F1_Score", y="Model", orientation="h",
                          color="F1_Score", color_continuous_scale="Blues")
             fig.update_layout(title="Weighted F1 Score Across Models", coloraxis_showscale=False)
-            st.plotly_chart(plotly_theme(fig), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig), width="stretch")
         with c2:
             metrics_long = res_df.melt(id_vars="Model", value_vars=["Accuracy", "Precision", "Recall", "F1_Score"])
             fig = px.bar(metrics_long, x="Model", y="value", color="variable", barmode="group")
             fig.update_layout(title="Metric Comparison Breakdown", yaxis_title="Score")
-            st.plotly_chart(plotly_theme(fig), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig), width="stretch")
 
         st.markdown("#### ⚔️ Head-to-Head Model Comparator")
         comp_m1, comp_m2 = st.columns(2)
@@ -1064,20 +1064,20 @@ elif page == "🧠 Model Lab":
         fig_radar.add_trace(go.Bar(name=m1_name, x=comp_metrics, y=[m1_row[m] for m in comp_metrics], marker_color=PALETTE["accent"]))
         fig_radar.add_trace(go.Bar(name=m2_name, x=comp_metrics, y=[m2_row[m] for m in comp_metrics], marker_color=PALETTE["safe"]))
         fig_radar.update_layout(barmode="group", title=f"{m1_name} vs {m2_name} — Side-by-Side Comparison", yaxis_range=[0.5, 0.9])
-        st.plotly_chart(plotly_theme(fig_radar, height=360), use_container_width=True)
+        st.plotly_chart(plotly_theme(fig_radar, height=360), width="stretch")
 
         st.markdown(f"#### Confusion Matrix — Best Model ({comparison['best_model']})")
         cm = np.array(comparison["confusion_matrix"])
         labels = comparison["class_names"]
         fig = px.imshow(cm, x=labels, y=labels, text_auto=True, color_continuous_scale="Blues")
         fig.update_layout(xaxis_title="Predicted", yaxis_title="Actual")
-        st.plotly_chart(plotly_theme(fig, height=380), use_container_width=True)
+        st.plotly_chart(plotly_theme(fig, height=380), width="stretch")
 
         st.markdown("#### Feature Importance (Random Forest Baseline)")
         fi = pd.Series(comparison["feature_importances"]).sort_values(ascending=False).head(15)[::-1]
         fig = px.bar(fi, orientation="h", color=fi.values, color_continuous_scale="Tealgrn")
         fig.update_layout(showlegend=False, coloraxis_showscale=False, xaxis_title="Gini Importance", yaxis_title="")
-        st.plotly_chart(plotly_theme(fig, height=420), use_container_width=True)
+        st.plotly_chart(plotly_theme(fig, height=420), width="stretch")
 
     # TAB 2: XGBoost Deep Dive
     with lab_tabs[1]:
@@ -1101,19 +1101,19 @@ elif page == "🧠 Model Lab":
             xgb_cm = np.array(comparison.get("xgboost_confusion_matrix", comparison["confusion_matrix"]))
             fig_xgb_cm = px.imshow(xgb_cm, x=labels, y=labels, text_auto=True, color_continuous_scale="Oranges")
             fig_xgb_cm.update_layout(xaxis_title="Predicted Risk", yaxis_title="Actual Risk")
-            st.plotly_chart(plotly_theme(fig_xgb_cm, height=360), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig_xgb_cm, height=360), width="stretch")
 
         with xgb_c2:
             st.markdown("#### XGBoost Feature Importance (Split Gain)")
             xgb_fi = pd.Series(comparison.get("xgboost_feature_importances", comparison["feature_importances"])).head(12)[::-1]
             fig_xgb_fi = px.bar(xgb_fi, orientation="h", color=xgb_fi.values, color_continuous_scale="Oranges")
             fig_xgb_fi.update_layout(showlegend=False, coloraxis_showscale=False, xaxis_title="Gain Contribution", yaxis_title="")
-            st.plotly_chart(plotly_theme(fig_xgb_fi, height=360), use_container_width=True)
+            st.plotly_chart(plotly_theme(fig_xgb_fi, height=360), width="stretch")
 
         st.markdown("#### XGBoost Per-Class Classification Report")
         xgb_rep = comparison.get("xgboost_classification_report", comparison["classification_report"])
         rep_df = pd.DataFrame(xgb_rep).T
-        st.dataframe(rep_df.round(3), use_container_width=True)
+        st.dataframe(rep_df.round(3), width="stretch")
 
         st.markdown(
             f"""<div class='sg-card'>
@@ -1148,7 +1148,7 @@ elif page == "🧠 Model Lab":
 
                 target_cls = st.radio("Target Disruption Class for Beeswarm", ["High", "Medium", "Low"], horizontal=True)
                 fig_beeswarm = plot_shap_beeswarm_interactive(global_shap_data, target_class=target_cls, top_n=14, height=520)
-                st.plotly_chart(fig_beeswarm, use_container_width=True)
+                st.plotly_chart(fig_beeswarm, width="stretch")
 
                 st.info("💡 **Key Finding:** High **Geo Weather Exposure**, high **Concentration Risk**, and high **Port Congestion** "
                         "cluster heavily to the right (+ SHAP), proving they are the strongest drivers elevating disruption probability.")
@@ -1157,7 +1157,7 @@ elif page == "🧠 Model Lab":
                 st.markdown("#### Mean Absolute SHAP Value Across Risk Classes")
                 st.caption("Measures overall feature importance magnitude across High, Medium, and Low disruption categories.")
                 fig_shap_bar = plot_shap_summary_bar(global_shap_data, top_n=15, height=480)
-                st.plotly_chart(fig_shap_bar, use_container_width=True)
+                st.plotly_chart(fig_shap_bar, width="stretch")
 
             with shap_t3:
                 st.markdown("#### Non-Linear SHAP Dependence Analysis")
@@ -1170,7 +1170,7 @@ elif page == "🧠 Model Lab":
                 )
                 dep_cls = st.selectbox("Risk Class", ["High", "Medium", "Low"], index=0, key="dep_cls")
                 fig_dep = plot_shap_dependence_interactive(global_shap_data, feature_name=dep_feat, target_class=dep_cls, height=420)
-                st.plotly_chart(fig_dep, use_container_width=True)
+                st.plotly_chart(fig_dep, width="stretch")
         else:
             st.warning("XGBoost model is training or artifacts are being generated...")
 
@@ -1262,7 +1262,7 @@ elif page == "🔮 Predict · Explain · Recommend":
             raw["Shipment_ID"] = target_sid
 
         st.markdown("")
-        btn_predict = st.button("🚀 Predict", type="primary", use_container_width=True)
+        btn_predict = st.button("🚀 Predict", type="primary", width="stretch")
 
         # Only run and save when Predict is clicked, or retain display if already predicted for this target_sid
         has_cached_pred = (
@@ -1481,7 +1481,7 @@ elif page == "🔮 Predict · Explain · Recommend":
                         ],
                     }))
                 fig = plotly_theme(fig, height=260)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
                 st.markdown(f"<div style='text-align:center' class='sg-band-{band.lower()}'>Band: {band}</div>", unsafe_allow_html=True)
 
             with r3:
@@ -1495,7 +1495,7 @@ elif page == "🔮 Predict · Explain · Recommend":
                                    xaxis_title="Contribution to EWS (%)", yaxis_title="",
                                    xaxis_range=[0, exp_df["contribution_pct"].max() * 1.35],
                                    margin=dict(l=10, r=60, t=50, b=10))
-                st.plotly_chart(plotly_theme(fig, height=260), use_container_width=True)
+                st.plotly_chart(plotly_theme(fig, height=260), width="stretch")
 
             # LOCAL SHAP WATERFALL VISUALIZATION
             if local_shap_res is not None:
@@ -1554,7 +1554,7 @@ elif page == "🔮 Predict · Explain · Recommend":
 
                 with wf_col1:
                     fig_wf = plot_shap_waterfall(local_shap_res, max_display=8, target_class="High", height=420)
-                    st.plotly_chart(fig_wf, key=f"shap_wf_{chart_key}", use_container_width=True)
+                    st.plotly_chart(fig_wf, key=f"shap_wf_{chart_key}", width="stretch")
 
                 with wf_col2:
                     st.markdown("##### Key Attribution Drivers")
@@ -1625,14 +1625,22 @@ elif page == "🔮 Predict · Explain · Recommend":
                         r_pred = r_doc.get("xgboost_prediction") or r_doc.get("predicted_risk_level", "N/A")
                         r_prob = r_doc.get("risk_probability")
                         prob_display = f"{float(r_prob)*100:.1f}%" if r_prob is not None else "N/A"
+                        ews_val = r_doc.get("early_warning_score")
+                        try:
+                            ews_clean = round(float(ews_val), 1) if ews_val is not None and ews_val != "N/A" else np.nan
+                        except (ValueError, TypeError):
+                            ews_clean = np.nan
                         rec_rows.append({
                             "Shipment_ID": r_doc.get("shipment_id", "N/A"),
                             "XGBoost_Prediction": r_pred,
                             "Risk_Probability": prob_display,
-                            "EWS_Score": r_doc.get("early_warning_score", "N/A"),
+                            "EWS_Score": ews_clean,
                             "Timestamp": r_doc.get("timestamp") or r_doc.get("prediction_timestamp", "N/A"),
                         })
-                    st.dataframe(pd.DataFrame(rec_rows), use_container_width=True)
+                    rec_df = pd.DataFrame(rec_rows)
+                    if not rec_df.empty and "EWS_Score" in rec_df.columns:
+                        rec_df["EWS_Score"] = pd.to_numeric(rec_df["EWS_Score"], errors="coerce")
+                    st.dataframe(rec_df, width="stretch")
                 else:
                     st.caption("No saved predictions in MongoDB yet.")
         else:
@@ -1716,11 +1724,16 @@ elif page == "🔮 Predict · Explain · Recommend":
                     else:
                         prob_str = "N/A"
 
+                    ews_val = p.get("early_warning_score")
+                    try:
+                        ews_clean = round(float(ews_val), 1) if ews_val is not None and ews_val != "N/A" else np.nan
+                    except (ValueError, TypeError):
+                        ews_clean = np.nan
                     h_rows.append({
                         "Shipment_ID": p.get("shipment_id", "N/A"),
                         "XGBoost_Prediction": p.get("predicted_risk_level", "N/A"),
                         "Risk_Probability": prob_str,
-                        "EWS_Score": p.get("early_warning_score", "N/A"),
+                        "EWS_Score": ews_clean,
                         "EWS_Band": p.get("ews_band", "N/A"),
                         "Key_SHAP_Driver": shap_top,
                         "Model": p.get("model_name", "XGBoostClassifier"),
@@ -1728,6 +1741,8 @@ elif page == "🔮 Predict · Explain · Recommend":
                     })
 
                 hist_df = pd.DataFrame(h_rows)
+                if not hist_df.empty and "EWS_Score" in hist_df.columns:
+                    hist_df["EWS_Score"] = pd.to_numeric(hist_df["EWS_Score"], errors="coerce")
 
                 def color_hist_risk(val):
                     c = PALETTE.get("safe") if val == "Low" else (PALETTE.get("watch") if val == "Medium" else PALETTE.get("critical"))
@@ -1736,7 +1751,7 @@ elif page == "🔮 Predict · Explain · Recommend":
                 if not hist_df.empty:
                     st.dataframe(
                         hist_df.style.map(color_hist_risk, subset=["XGBoost_Prediction"]),
-                        use_container_width=True,
+                        width="stretch",
                         height=360,
                     )
 
@@ -1764,7 +1779,7 @@ elif page == "🔮 Predict · Explain · Recommend":
                             st.markdown("##### 📦 Stored Shipment Inputs")
                             stored_inputs = sel_pred.get("actual_input_values") or sel_pred.get("shipment_inputs") or sel_pred.get("input_features") or {}
                             if stored_inputs:
-                                st.dataframe(pd.DataFrame(list(stored_inputs.items()), columns=["Feature", "Value"]), use_container_width=True, height=260)
+                                st.dataframe(pd.DataFrame(list(stored_inputs.items()), columns=["Feature", "Value"]), width="stretch", height=260)
                             else:
                                 st.caption("No input dictionary embedded.")
                         with d_c2:
@@ -1811,7 +1826,7 @@ elif page == "📋 Risk Ranking":
     st.dataframe(
         rdf[display_cols].style.map(color_band, subset=["EWS_Band"])
         .background_gradient(subset=["Early_Warning_Score"], cmap="OrRd"),
-        use_container_width=True, height=480,
+        width="stretch", height=480,
     )
 
     st.download_button("⬇️ Download ranked list (CSV)", rdf[display_cols].to_csv(index=False),
@@ -1825,7 +1840,7 @@ elif page == "📋 Risk Ranking":
         top15 = rdf.head(15).sort_values("Early_Warning_Score")
         fig = px.bar(top15, x="Early_Warning_Score", y="Shipment_ID", orientation="h",
                      color="EWS_Band", color_discrete_map=BAND_COLOR)
-        st.plotly_chart(plotly_theme(fig, height=440), use_container_width=True)
+        st.plotly_chart(plotly_theme(fig, height=440), width="stretch")
 
     with r_col2:
         st.markdown("#### 🤖 AI Shipment Diagnostic & Action Plan")
@@ -1836,7 +1851,7 @@ elif page == "📋 Risk Ranking":
         diag_res = agent.analyze_shipment(trace_sid)
         st.markdown(diag_res.summary, unsafe_allow_html=True)
         with st.expander("📊 View Factual Shipment Evidence & Features"):
-            st.dataframe(diag_res.evidence_df, use_container_width=True)
+            st.dataframe(diag_res.evidence_df, width="stretch")
         if diag_res.recommendations:
             st.markdown("##### ⚡ Priority Interventions")
             for r in diag_res.recommendations[:2]:
@@ -1900,7 +1915,7 @@ elif page == "🧪 What-If Simulator":
     fig.add_bar(name="Baseline", x=comp_df["Factor"], y=comp_df["Baseline"], marker_color=PALETTE["muted"])
     fig.add_bar(name="Simulated", x=comp_df["Factor"], y=comp_df["Simulated"], marker_color=PALETTE["accent"])
     fig.update_layout(barmode="group", title="Composite Risk Sub-Scores — Baseline vs Simulated")
-    st.plotly_chart(plotly_theme(fig, height=420), use_container_width=True)
+    st.plotly_chart(plotly_theme(fig, height=420), width="stretch")
 
     st.info("Tip: Try lowering **Single-sourcing** and raising **Inventory Buffer** to see how quickly "
             "concentration and demand-volatility risk fall — often the fastest levers to pull.")
