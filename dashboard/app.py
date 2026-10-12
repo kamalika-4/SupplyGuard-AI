@@ -1779,127 +1779,127 @@ elif page == "🔮 Predict · Explain · Recommend":
             else:
                 st.info("ℹ️ **No saved predictions found in MongoDB (`SupplyGuardDB.risk_predictions`).**\n\n"
                         "Switch to the **Score & Predict Shipment** tab above, click **🚀 Predict**, and the real prediction, inputs, risk probability, and SHAP summary will appear here.")
-            else:
-                # Summary KPIs
-                h_k1, h_k2, h_k3, h_k4 = st.columns(4)
-                h_k1.metric("Saved Predictions", f"{len(hist_preds):,}")
-                high_count = sum(1 for p in hist_preds if p.get("predicted_risk_level") == "High")
-                med_count = sum(1 for p in hist_preds if p.get("predicted_risk_level") == "Medium")
-                low_count = sum(1 for p in hist_preds if p.get("predicted_risk_level") == "Low")
-                h_k2.metric("High Risk", f"{high_count}", delta=f"{high_count/len(hist_preds)*100:.0f}%" if hist_preds else "0%")
-                h_k3.metric("Medium Risk", f"{med_count}", delta=f"{med_count/len(hist_preds)*100:.0f}%" if hist_preds else "0%")
-                h_k4.metric("Low Risk", f"{low_count}", delta=f"{low_count/len(hist_preds)*100:.0f}%" if hist_preds else "0%")
+        else:
+            # Summary KPIs
+            h_k1, h_k2, h_k3, h_k4 = st.columns(4)
+            h_k1.metric("Saved Predictions", f"{len(hist_preds):,}")
+            high_count = sum(1 for p in hist_preds if p.get("predicted_risk_level") == "High")
+            med_count = sum(1 for p in hist_preds if p.get("predicted_risk_level") == "Medium")
+            low_count = sum(1 for p in hist_preds if p.get("predicted_risk_level") == "Low")
+            h_k2.metric("High Risk", f"{high_count}", delta=f"{high_count/len(hist_preds)*100:.0f}%" if hist_preds else "0%")
+            h_k3.metric("Medium Risk", f"{med_count}", delta=f"{med_count/len(hist_preds)*100:.0f}%" if hist_preds else "0%")
+            h_k4.metric("Low Risk", f"{low_count}", delta=f"{low_count/len(hist_preds)*100:.0f}%" if hist_preds else "0%")
 
-                st.markdown("---")
-                # Filter bar
-                hf_c1, hf_c2, hf_c3, hf_c4 = st.columns([2, 1.5, 1.5, 1])
-                with hf_c1:
-                    h_search = st.text_input("🔍 Search Shipment ID", placeholder="e.g. SG02088", key="hist_search_box")
-                with hf_c2:
-                    h_risk_filter = st.multiselect("Risk Level", ["Low", "Medium", "High"], default=[], key="hist_risk_multisel")
-                with hf_c3:
-                    h_model_filter = st.multiselect("Model Filter", ["XGBoostClassifier", "LogisticRegression"], default=[], key="hist_model_multisel")
-                with hf_c4:
-                    h_limit = st.selectbox("Limit", [10, 25, 50, 100], index=2, key="hist_limit_sel")
+            st.markdown("---")
+            # Filter bar
+            hf_c1, hf_c2, hf_c3, hf_c4 = st.columns([2, 1.5, 1.5, 1])
+            with hf_c1:
+                h_search = st.text_input("🔍 Search Shipment ID", placeholder="e.g. SG02088", key="hist_search_box")
+            with hf_c2:
+                h_risk_filter = st.multiselect("Risk Level", ["Low", "Medium", "High"], default=[], key="hist_risk_multisel")
+            with hf_c3:
+                h_model_filter = st.multiselect("Model Filter", ["XGBoostClassifier", "LogisticRegression"], default=[], key="hist_model_multisel")
+            with hf_c4:
+                h_limit = st.selectbox("Limit", [10, 25, 50, 100], index=2, key="hist_limit_sel")
 
-                filtered_preds = hist_preds
-                if h_search.strip():
-                    filtered_preds = [p for p in filtered_preds if h_search.strip().lower() in str(p.get("shipment_id", "")).lower()]
-                if h_risk_filter:
-                    filtered_preds = [p for p in filtered_preds if p.get("predicted_risk_level") in h_risk_filter]
-                if h_model_filter:
-                    filtered_preds = [p for p in filtered_preds if p.get("model_name") in h_model_filter]
-                filtered_preds = filtered_preds[:h_limit]
+            filtered_preds = hist_preds
+            if h_search.strip():
+                filtered_preds = [p for p in filtered_preds if h_search.strip().lower() in str(p.get("shipment_id", "")).lower()]
+            if h_risk_filter:
+                filtered_preds = [p for p in filtered_preds if p.get("predicted_risk_level") in h_risk_filter]
+            if h_model_filter:
+                filtered_preds = [p for p in filtered_preds if p.get("model_name") in h_model_filter]
+            filtered_preds = filtered_preds[:h_limit]
 
-                # Build table
-                h_rows = []
-                for p in filtered_preds:
-                    shap_top = "N/A"
-                    if isinstance(p.get("shap_summary"), dict) and p["shap_summary"].get("top_risk_drivers"):
-                        drivers = p["shap_summary"]["top_risk_drivers"]
-                        if drivers and isinstance(drivers, list):
-                            shap_top = drivers[0].get("friendly_name", "N/A")
-                    elif p.get("top_risk_drivers") and isinstance(p["top_risk_drivers"], list):
-                        shap_top = p["top_risk_drivers"][0].get("factor", "N/A")
+            # Build table
+            h_rows = []
+            for p in filtered_preds:
+                shap_top = "N/A"
+                if isinstance(p.get("shap_summary"), dict) and p["shap_summary"].get("top_risk_drivers"):
+                    drivers = p["shap_summary"]["top_risk_drivers"]
+                    if drivers and isinstance(drivers, list):
+                        shap_top = drivers[0].get("friendly_name", "N/A")
+                elif p.get("top_risk_drivers") and isinstance(p["top_risk_drivers"], list):
+                    shap_top = p["top_risk_drivers"][0].get("factor", "N/A")
 
-                    prob_val = p.get("risk_probability")
-                    if prob_val is not None:
-                        prob_str = f"{float(prob_val)*100:.1f}%"
-                    elif isinstance(p.get("prediction_probabilities"), dict) and "High" in p["prediction_probabilities"]:
-                        prob_str = f"{float(p['prediction_probabilities']['High'])*100:.1f}%"
-                    else:
-                        prob_str = "N/A"
-
-                    ews_val = p.get("early_warning_score")
-                    try:
-                        ews_clean = round(float(ews_val), 1) if ews_val is not None and ews_val != "N/A" else np.nan
-                    except (ValueError, TypeError):
-                        ews_clean = np.nan
-                    h_rows.append({
-                        "Shipment_ID": p.get("shipment_id", "N/A"),
-                        "XGBoost_Prediction": p.get("predicted_risk_level", "N/A"),
-                        "Risk_Probability": prob_str,
-                        "EWS_Score": ews_clean,
-                        "EWS_Band": p.get("ews_band", "N/A"),
-                        "Key_SHAP_Driver": shap_top,
-                        "Model": p.get("model_name", "XGBoostClassifier"),
-                        "Timestamp": p.get("timestamp") or p.get("prediction_timestamp") or p.get("created_at", "N/A"),
-                    })
-
-                hist_df = pd.DataFrame(h_rows)
-                if not hist_df.empty and "EWS_Score" in hist_df.columns:
-                    hist_df["EWS_Score"] = pd.to_numeric(hist_df["EWS_Score"], errors="coerce")
-
-                def color_hist_risk(val):
-                    c = PALETTE.get("safe") if val == "Low" else (PALETTE.get("watch") if val == "Medium" else PALETTE.get("critical"))
-                    return f"color: {c}; font-weight: 700"
-
-                if not hist_df.empty:
-                    st.dataframe(
-                        hist_df.style.map(color_hist_risk, subset=["XGBoost_Prediction"]),
-                        width="stretch",
-                        height=360,
-                    )
-
-                    h_btn_c1, h_btn_c2 = st.columns([1, 1])
-                    with h_btn_c1:
-                        st.download_button(
-                            "⬇️ Export Prediction History (CSV)",
-                            hist_df.to_csv(index=False),
-                            "prediction_history.csv",
-                            key="dl_pred_history_csv",
-                        )
-                    with h_btn_c2:
-                        if st.button("🔄 Refresh Prediction History", key="btn_refresh_pred_hist"):
-                            get_cached_mongo_status.clear()
-                            st.rerun()
-
-                    # Deep Dive Document Inspector
-                    with st.expander("🔍 Inspect Historical Prediction Details & SHAP Telemetry"):
-                        doc_labels = [f"{p.get('shipment_id', 'N/A')} | {p.get('predicted_risk_level', 'N/A')} ({p.get('timestamp', '')[:19]})" for p in filtered_preds]
-                        sel_doc_idx = st.selectbox("Select Prediction Record", range(len(doc_labels)), format_func=lambda i: doc_labels[i], key="sel_hist_doc")
-                        sel_pred = filtered_preds[sel_doc_idx]
-
-                        d_c1, d_c2 = st.columns(2)
-                        with d_c1:
-                            st.markdown("##### 📦 Stored Shipment Inputs")
-                            stored_inputs = sel_pred.get("actual_input_values") or sel_pred.get("shipment_inputs") or sel_pred.get("input_features") or {}
-                            if stored_inputs:
-                                st.dataframe(pd.DataFrame(list(stored_inputs.items()), columns=["Feature", "Value"]), width="stretch", height=260)
-                            else:
-                                st.caption("No input dictionary embedded.")
-                        with d_c2:
-                            st.markdown("##### 🔬 Stored SHAP Explanation & Probabilities")
-                            stored_shap = sel_pred.get("shap_explanation") or sel_pred.get("shap_summary", {})
-                            if stored_shap and isinstance(stored_shap, dict):
-                                st.json(stored_shap)
-                            else:
-                                st.caption("No SHAP summary dictionary embedded.")
-
-                        st.markdown("##### 📄 Full MongoDB Document (BSON/JSON)")
-                        st.json(sel_pred)
+                prob_val = p.get("risk_probability")
+                if prob_val is not None:
+                    prob_str = f"{float(prob_val)*100:.1f}%"
+                elif isinstance(p.get("prediction_probabilities"), dict) and "High" in p["prediction_probabilities"]:
+                    prob_str = f"{float(p['prediction_probabilities']['High'])*100:.1f}%"
                 else:
-                    st.info("No prediction history records matched your filter criteria.")
+                    prob_str = "N/A"
+
+                ews_val = p.get("early_warning_score")
+                try:
+                    ews_clean = round(float(ews_val), 1) if ews_val is not None and ews_val != "N/A" else np.nan
+                except (ValueError, TypeError):
+                    ews_clean = np.nan
+                h_rows.append({
+                    "Shipment_ID": p.get("shipment_id", "N/A"),
+                    "XGBoost_Prediction": p.get("predicted_risk_level", "N/A"),
+                    "Risk_Probability": prob_str,
+                    "EWS_Score": ews_clean,
+                    "EWS_Band": p.get("ews_band", "N/A"),
+                    "Key_SHAP_Driver": shap_top,
+                    "Model": p.get("model_name", "XGBoostClassifier"),
+                    "Timestamp": p.get("timestamp") or p.get("prediction_timestamp") or p.get("created_at", "N/A"),
+                })
+
+            hist_df = pd.DataFrame(h_rows)
+            if not hist_df.empty and "EWS_Score" in hist_df.columns:
+                hist_df["EWS_Score"] = pd.to_numeric(hist_df["EWS_Score"], errors="coerce")
+
+            def color_hist_risk(val):
+                c = PALETTE.get("safe") if val == "Low" else (PALETTE.get("watch") if val == "Medium" else PALETTE.get("critical"))
+                return f"color: {c}; font-weight: 700"
+
+            if not hist_df.empty:
+                st.dataframe(
+                    hist_df.style.map(color_hist_risk, subset=["XGBoost_Prediction"]),
+                    width="stretch",
+                    height=360,
+                )
+
+                h_btn_c1, h_btn_c2 = st.columns([1, 1])
+                with h_btn_c1:
+                    st.download_button(
+                        "⬇️ Export Prediction History (CSV)",
+                        hist_df.to_csv(index=False),
+                        "prediction_history.csv",
+                        key="dl_pred_history_csv",
+                    )
+                with h_btn_c2:
+                    if st.button("🔄 Refresh Prediction History", key="btn_refresh_pred_hist"):
+                        get_cached_mongo_status.clear()
+                        st.rerun()
+
+                # Deep Dive Document Inspector
+                with st.expander("🔍 Inspect Historical Prediction Details & SHAP Telemetry"):
+                    doc_labels = [f"{p.get('shipment_id', 'N/A')} | {p.get('predicted_risk_level', 'N/A')} ({p.get('timestamp', '')[:19]})" for p in filtered_preds]
+                    sel_doc_idx = st.selectbox("Select Prediction Record", range(len(doc_labels)), format_func=lambda i: doc_labels[i], key="sel_hist_doc")
+                    sel_pred = filtered_preds[sel_doc_idx]
+
+                    d_c1, d_c2 = st.columns(2)
+                    with d_c1:
+                        st.markdown("##### 📦 Stored Shipment Inputs")
+                        stored_inputs = sel_pred.get("actual_input_values") or sel_pred.get("shipment_inputs") or sel_pred.get("input_features") or {}
+                        if stored_inputs:
+                            st.dataframe(pd.DataFrame(list(stored_inputs.items()), columns=["Feature", "Value"]), width="stretch", height=260)
+                        else:
+                            st.caption("No input dictionary embedded.")
+                    with d_c2:
+                        st.markdown("##### 🔬 Stored SHAP Explanation & Probabilities")
+                        stored_shap = sel_pred.get("shap_explanation") or sel_pred.get("shap_summary", {})
+                        if stored_shap and isinstance(stored_shap, dict):
+                            st.json(stored_shap)
+                        else:
+                            st.caption("No SHAP summary dictionary embedded.")
+
+                    st.markdown("##### 📄 Full MongoDB Document (BSON/JSON)")
+                    st.json(sel_pred)
+            else:
+                st.info("No prediction history records matched your filter criteria.")
 
 
 # ========================================================================================
