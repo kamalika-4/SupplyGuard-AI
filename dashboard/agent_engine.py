@@ -34,6 +34,7 @@ from mongo_db import (
     save_risk_prediction,
     check_mongo_connection,
     sanitize_for_mongo,
+    is_mongo_persistence_disabled,
 )
 from risk_engine import (
     predict_ml,
@@ -582,21 +583,25 @@ class SupplyChainDataToActionAgent:
         preds = get_risk_predictions(limit=100)
 
         if not preds:
+            cloud_note = ""
+            if is_mongo_persistence_disabled():
+                cloud_note = "\n• **Cloud Deployment Mode:** Running in Streamlit Community Cloud (free tier) with in-memory execution. To enable persistent database audit logs, run SupplyGuard AI locally at `mongodb://localhost:27017/`."
             return AgentResponse(
                 question="Audit MongoDB prediction history",
                 intent="prediction_history",
                 summary=(
                     "### 📜 MongoDB Prediction History Audit\n\n"
-                    "• **Status:** No prediction records currently logged in `SupplyGuardDB.risk_predictions`.\n"
+                    "• **Status:** No prediction records currently logged in `SupplyGuardDB.risk_predictions`."
+                    + cloud_note + "\n"
                     "• **Action:** Navigate to the **🔮 Predict · Explain · Recommend** page, score a shipment, "
-                    "and click **Predict** to populate real audit telemetry into MongoDB."
+                    "and click **Predict** to compute real ML inferences and calculate SHAP attributions."
                 ),
                 evidence_df=pd.DataFrame(),
                 tools_used=tools_used,
                 recommendations=[{
                     "priority": 1,
-                    "factor": "Populate Prediction Logs",
-                    "actions": ["Run manual or automated batch predictions on the Predict page.", "Use MongoDB Records tab to verify connection status."],
+                    "factor": "Populate Prediction Telemetry",
+                    "actions": ["Run manual or automated batch predictions on the Predict page.", "To persist to database, run locally with MongoDB."],
                 }],
             )
 

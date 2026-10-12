@@ -34,6 +34,67 @@ SHIPMENTS_COLLECTION = "shipments"
 PREDICTIONS_COLLECTION = "risk_predictions"
 
 
+def is_cloud_environment() -> bool:
+    """
+    Detects if running on Streamlit Community Cloud or remote container environment.
+    Checks environment variables, container paths, and Streamlit secrets.
+    """
+    for var in (
+        "STREAMLIT_SHARING_MODE",
+        "IS_STREAMLIT_CLOUD",
+        "STREAMLIT_COMMUNITY_CLOUD",
+        "STREAMLIT_CLOUD",
+        "SPACE_ID",
+        "RENDER",
+        "FLY_APP_NAME",
+        "RAILWAY_STATIC_URL",
+    ):
+        if os.getenv(var):
+            return True
+
+    # Common Streamlit Community Cloud container directory markers
+    if os.path.exists("/mount/src") or os.path.exists("/home/appuser"):
+        return True
+
+    # Streamlit secrets check
+    try:
+        import streamlit as _st
+        if hasattr(_st, "secrets"):
+            if _st.secrets.get("IS_STREAMLIT_CLOUD", False):
+                return True
+            if _st.secrets.get("STREAMLIT_CLOUD", False):
+                return True
+    except Exception:
+        pass
+
+    return False
+
+
+def is_mongo_persistence_disabled(uri: Optional[str] = None) -> bool:
+    """
+    Determines if MongoDB persistence should be gracefully disabled.
+    In cloud deployment with local loopback (localhost/127.0.0.1) URI and no remote MongoDB configured,
+    persistence is gracefully disabled without connection errors or timeouts.
+    When running locally, returns False so local MongoDB saving remains fully enabled.
+    """
+    target_uri = uri or os.getenv("MONGODB_URI")
+    if not target_uri:
+        try:
+            import streamlit as _st
+            if hasattr(_st, "secrets") and "MONGODB_URI" in _st.secrets:
+                target_uri = _st.secrets["MONGODB_URI"]
+        except Exception:
+            pass
+
+    target_uri = target_uri or DEFAULT_MONGO_URI
+
+    # If it is a remote cluster URI (e.g. Atlas mongodb+srv://), persistence is not disabled
+    is_loopback = ("localhost" in target_uri) or ("127.0.0.1" in target_uri)
+    if is_cloud_environment() and is_loopback:
+        return True
+    return False
+
+
 def sanitize_for_mongo(val: Any) -> Any:
     """Recursively converts numpy, pandas, and other non-BSON types to standard Python primitives."""
     if val is None:
@@ -130,9 +191,22 @@ def check_mongo_connection(
     uri = uri or DEFAULT_MONGO_URI
     db_name = db_name or DEFAULT_DB_NAME
 
+    if is_mongo_persistence_disabled(uri):
+        info = {
+            "uri": "mongodb://localhost:27017/ (disabled in cloud)",
+            "database": db_name,
+            "status": "Disabled (Streamlit Cloud Mode)",
+            "cloud_mode": True,
+            "collections": [],
+            "shipments_count": 0,
+            "predictions_count": 0,
+            "message": "MongoDB persistence is gracefully disabled for Streamlit Community Cloud free tier. Predictions run live in-memory.",
+        }
+        return False, info, None
+
     db, err = get_database_with_error(uri, db_name, timeout_ms=timeout_ms)
     if db is None:
-        return False, {"uri": uri, "database": db_name, "status": "Offline"}, err or "Server is unreachable."
+        return False, {"uri": uri, "database": db_name, "status": "Offline", "cloud_mode": False}, err or "Server is unreachable."
 
     try:
         client = db.client
@@ -151,10 +225,11 @@ def check_mongo_connection(
             "shipments_count": shipments_count,
             "predictions_count": predictions_count,
             "status": "Connected",
+            "cloud_mode": False,
         }
         return True, info, None
     except Exception as e:
-        return False, {"uri": uri, "database": db_name, "status": "Offline"}, str(e)
+        return False, {"uri": uri, "database": db_name, "status": "Offline", "cloud_mode": False}, str(e)
 
 
 def get_database_with_error(
@@ -167,6 +242,9 @@ def get_database_with_error(
         return None, "pymongo package is not installed."
     uri = uri or DEFAULT_MONGO_URI
     db_name = db_name or DEFAULT_DB_NAME
+
+    if is_mongo_persistence_disabled(uri):
+        return None, "MongoDB persistence is gracefully disabled in Streamlit Cloud."
 
     candidates = get_candidate_uris(uri)
     last_err = None
@@ -218,6 +296,16 @@ def save_shipment(
     Saves or updates an actual shipment record in the 'shipments' collection.
     Upserts by shipment_id / Shipment_ID if present.
     """
+    if is_mongo_persistence_disabled(uri):
+        sid = shipment_data.get("shipment_id") or shipment_data.get("Shipment_ID", "UNKNOWN")
+        return {
+            "success": False,
+            "cloud_mode": True,
+            "disabled": True,
+            "shipment_id": sid,
+            "message": "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting.",
+        }
+
     db, conn_err = get_database_with_error(uri, db_name, timeout_ms=timeout_ms)
     if db is None:
         return {"success": False, "error": f"MongoDB server is not reachable: {conn_err or 'Connection failed'}"}
@@ -275,6 +363,16 @@ def save_risk_prediction(
     """
     uri = uri or DEFAULT_MONGO_URI
     db_name = db_name or DEFAULT_DB_NAME
+
+    if is_mongo_persistence_disabled(uri):
+        sid = prediction_data.get("shipment_id") or prediction_data.get("Shipment_ID", "UNKNOWN")
+        return {
+            "success": False,
+            "cloud_mode": True,
+            "disabled": True,
+            "shipment_id": sid,
+            "message": "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting. Prediction was computed live in-memory.",
+        }
 
     db, conn_err = get_database_with_error(uri, db_name, timeout_ms=timeout_ms)
     if db is None:
@@ -362,6 +460,9 @@ def get_shipments(
     db_name: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Retrieves saved shipment records from MongoDB."""
+    if is_mongo_persistence_disabled(uri):
+        return []
+
     db = get_database(uri, db_name)
     if db is None:
         return []
@@ -385,6 +486,9 @@ def get_risk_predictions(
     db_name: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Retrieves saved ML prediction records from MongoDB."""
+    if is_mongo_persistence_disabled(uri):
+        return []
+
     db = get_database(uri, db_name)
     if db is None:
         return []
@@ -407,6 +511,15 @@ def bulk_save_shipments(
     db_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Bulk imports or updates shipment records into MongoDB."""
+    if is_mongo_persistence_disabled(uri):
+        return {
+            "success": False,
+            "cloud_mode": True,
+            "disabled": True,
+            "count": 0,
+            "message": "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting.",
+        }
+
     db = get_database(uri, db_name)
     if db is None:
         return {"success": False, "error": "MongoDB server is not reachable."}
@@ -461,6 +574,15 @@ def bulk_save_risk_predictions(
     """
     uri = uri or DEFAULT_MONGO_URI
     db_name = db_name or DEFAULT_DB_NAME
+
+    if is_mongo_persistence_disabled(uri):
+        return {
+            "success": False,
+            "cloud_mode": True,
+            "disabled": True,
+            "count": 0,
+            "message": "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting. Predictions were computed live in-memory.",
+        }
 
     db, conn_err = get_database_with_error(uri, db_name, timeout_ms=timeout_ms)
     if db is None:
