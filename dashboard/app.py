@@ -35,7 +35,8 @@ from mongo_db import (
     check_mongo_connection, save_shipment, save_risk_prediction,
     get_shipments, get_risk_predictions, bulk_save_shipments,
     bulk_save_risk_predictions, sanitize_for_mongo,
-    is_cloud_environment, is_mongo_persistence_disabled
+    is_cloud_environment, is_mongo_persistence_disabled,
+    get_configured_mongo_uri
 )
 
 DATA_PATH = os.path.join(BASE, "data", "feature_engineered_data.csv")
@@ -291,13 +292,16 @@ if mongo_info.get("cloud_mode"):
         unsafe_allow_html=True,
     )
 elif mongo_ok:
+    is_atlas = "mongodb+srv://" in mongo_info.get("uri", "") or "mongodb.net" in mongo_info.get("uri", "")
+    db_label = "MongoDB Atlas" if is_atlas else "MongoDB"
     st.sidebar.markdown(
-        f"<span class='sg-pill' style='color:{PALETTE['safe']}'>🍃 MongoDB: Connected (SupplyGuardDB)</span>",
+        f"<span class='sg-pill' style='color:{PALETTE['safe']}'>🍃 {db_label}: Connected ({mongo_info.get('database', 'SupplyGuardDB')})</span>",
         unsafe_allow_html=True,
     )
 else:
+    target_display = "Atlas" if ("mongodb+srv://" in mongo_info.get("uri", "") or "mongodb.net" in mongo_info.get("uri", "")) else "localhost:27017"
     st.sidebar.markdown(
-        f"<span class='sg-pill' style='color:{PALETTE['critical']}'>🍃 MongoDB: Offline (localhost:27017)</span>",
+        f"<span class='sg-pill' style='color:{PALETTE['critical']}'>🍃 MongoDB: Offline ({target_display})</span>",
         unsafe_allow_html=True,
     )
 
@@ -385,9 +389,13 @@ if page == "🏠 Mission Control":
         if mongo_info.get("cloud_mode"):
             agent_status_pill = f"<span class='sg-pill' style='color:{PALETTE['muted']}'>☁️ Cloud Mode: Live Telemetry</span>"
         elif mongo_ok:
-            agent_status_pill = f"<span class='sg-pill' style='color:{PALETTE['safe']}'>🍃 MongoDB: Connected (`SupplyGuardDB`)</span>"
+            is_atlas = "mongodb+srv://" in mongo_info.get("uri", "") or "mongodb.net" in mongo_info.get("uri", "")
+            lbl = "MongoDB Atlas: Connected (`SupplyGuardDB`)" if is_atlas else "MongoDB: Connected (`SupplyGuardDB`)"
+            agent_status_pill = f"<span class='sg-pill' style='color:{PALETTE['safe']}'>🍃 {lbl}</span>"
         else:
-            agent_status_pill = f"<span class='sg-pill' style='color:{PALETTE['critical']}'>🍃 MongoDB: Offline Mode</span>"
+            is_atlas = "mongodb+srv://" in mongo_info.get("uri", "") or "mongodb.net" in mongo_info.get("uri", "")
+            lbl = "MongoDB Atlas: Offline Mode" if is_atlas else "MongoDB: Offline Mode"
+            agent_status_pill = f"<span class='sg-pill' style='color:{PALETTE['critical']}'>🍃 {lbl}</span>"
         agent_k1.markdown(agent_status_pill, unsafe_allow_html=True)
         agent_k2.markdown(f"<span class='sg-pill' style='color:{PALETTE['accent']}'>⚡ ML Engine: XGBoost + SHAP</span>", unsafe_allow_html=True)
         agent_k3.markdown(f"<span class='sg-pill' style='color:{PALETTE['watch']}'>🎯 Scorers: EWS Composite Rules</span>", unsafe_allow_html=True)
@@ -1038,23 +1046,24 @@ elif page == "📊 Preprocessing & EDA":
 
                                 if is_mongo_persistence_disabled():
                                     st.info(
-                                        "ℹ️ **Streamlit Cloud Mode (Free Tier):** MongoDB persistence is gracefully disabled for free cloud hosting. "
+                                        "ℹ️ **Streamlit Cloud Mode (Free Tier):** MongoDB persistence is gracefully disabled because no remote MONGODB_URI is configured in Streamlit Secrets. "
                                         f"All **{len(mongo_docs):,}** batch predictions were computed live in-memory and are available in the table above. "
                                         "Use the **⬇️ Download Predictions (CSV)** button to export your scored dataset. "
-                                        "(To persist batch records directly into MongoDB, run SupplyGuard AI locally at `mongodb://localhost:27017/`)."
+                                        "(To persist batch records directly into MongoDB, configure `MONGODB_URI` in Streamlit Secrets or run locally at `mongodb://localhost:27017/`)."
                                     )
                                 else:
                                     b_res = bulk_save_risk_predictions(
                                         mongo_docs,
-                                        uri="mongodb://localhost:27017/",
                                         db_name="SupplyGuardDB"
                                     )
 
                                     if b_res.get("success"):
+                                        is_atlas = "mongodb+srv://" in mongo_info.get("uri", "") or "mongodb.net" in mongo_info.get("uri", "")
+                                        db_dest = "MongoDB Atlas (`SupplyGuardDB.risk_predictions`)" if is_atlas else "MongoDB database `SupplyGuardDB.risk_predictions` at `mongodb://localhost:27017/`"
                                         st.success(
                                             f"✅ Successfully persisted **{b_res.get('count', len(mongo_docs)):,}** prediction records to "
-                                            f"MongoDB database `SupplyGuardDB.risk_predictions` at `mongodb://localhost:27017/`. "
-                                            f"All records are now verified, live in MongoDB Compass, and queryable in Prediction History!"
+                                            f"{db_dest}. "
+                                            f"All records are now verified, live in MongoDB, and queryable in Prediction History!"
                                         )
                                         get_cached_mongo_status.clear()
                                     elif b_res.get("cloud_mode"):
@@ -1404,7 +1413,7 @@ elif page == "🔮 Predict · Explain · Recommend":
                             "ews_band": band,
                             "updated_at": timestamp_now,
                         }
-                        save_shipment(shipment_payload, uri="mongodb://localhost:27017/", db_name="SupplyGuardDB")
+                        save_shipment(shipment_payload, db_name="SupplyGuardDB")
                     except Exception:
                         pass  # Non-blocking for prediction saving
 
@@ -1434,19 +1443,20 @@ elif page == "🔮 Predict · Explain · Recommend":
                     }
                     pred_res = save_risk_prediction(
                         pred_payload,
-                        uri="mongodb://localhost:27017/",
                         db_name="SupplyGuardDB",
                         prevent_duplicates=False,
                     )
 
                     if pred_res.get("success") and pred_res.get("prediction_id"):
+                        is_atlas = "mongodb+srv://" in mongo_info.get("uri", "") or "mongodb.net" in mongo_info.get("uri", "")
+                        target_name = "MongoDB Atlas (`SupplyGuardDB.risk_predictions`)" if is_atlas else "MongoDB (`SupplyGuardDB.risk_predictions`)"
                         db_save_status = {
                             "type": "success",
                             "msg": (
                                 f"Saved actual shipment inputs, XGBoost prediction (`{xgb_label}`), "
                                 f"P(High Risk) = `{risk_prob*100:.1f}%`, "
                                 f"{'SHAP summary, ' if shap_summary and not shap_summary.get('error') else ''}and timestamp to "
-                                f"MongoDB (`SupplyGuardDB.risk_predictions`). "
+                                f"{target_name}. "
                                 f"Audit ID: `{pred_res.get('prediction_id')}`"
                             ),
                         }
@@ -1455,10 +1465,10 @@ elif page == "🔮 Predict · Explain · Recommend":
                         db_save_status = {
                             "type": "info",
                             "msg": (
-                                "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting. "
+                                "Streamlit Cloud Mode: MongoDB persistence is disabled because no remote MONGODB_URI is configured in Streamlit Secrets. "
                                 f"XGBoost prediction (`{xgb_label}`), P(High Risk) = `{risk_prob*100:.1f}%`, and SHAP attribution "
-                                "were computed live in-memory. (To enable persistent database audit logging, run locally with "
-                                "mongodb://localhost:27017/ or configure MongoDB Atlas in Streamlit Secrets)."
+                                "were computed live in-memory. (To enable persistent database audit logging, configure MONGODB_URI in Streamlit Secrets; or run locally with "
+                                "mongodb://localhost:27017/)."
                             ),
                         }
                     else:
@@ -1488,7 +1498,7 @@ elif page == "🔮 Predict · Explain · Recommend":
                     "timestamp": timestamp_now,
                     "prediction_timestamp": timestamp_now,
                     "created_at": timestamp_now,
-                    "source": "In-Memory Session" if is_mongo_persistence_disabled() else "MongoDB Verified",
+                    "source": "In-Memory Session" if is_mongo_persistence_disabled() else ("MongoDB Atlas Verified" if ("mongodb+srv://" in mongo_info.get("uri", "") or "mongodb.net" in mongo_info.get("uri", "")) else "MongoDB Verified"),
                 }
                 if "session_predictions" not in st.session_state:
                     st.session_state["session_predictions"] = []
@@ -1747,17 +1757,19 @@ elif page == "🔮 Predict · Explain · Recommend":
 
         if mongo_info.get("cloud_mode"):
             st.info(
-                "ℹ️ **Streamlit Cloud Mode (Free Deployment):** MongoDB persistence is gracefully disabled for free cloud hosting. "
+                "ℹ️ **Streamlit Cloud Mode (Free Deployment):** MongoDB persistence is gracefully disabled because no remote MONGODB_URI is configured in Streamlit Secrets. "
                 "All ML risk predictions and SHAP explanations run live in-memory. "
                 "Below is your **active session prediction history** generated while using the dashboard in this browser session.\n\n"
-                "(To view persistent records in MongoDB Compass, run SupplyGuard AI locally at `mongodb://localhost:27017/`)."
+                "(To view persistent records in MongoDB Atlas, configure `MONGODB_URI` in Streamlit Secrets; or run SupplyGuard AI locally at `mongodb://localhost:27017/`)."
             )
             hist_preds = st.session_state.get("session_predictions", [])
         elif not mongo_ok:
+            is_atlas = "mongodb+srv://" in mongo_info.get("uri", "") or "mongodb.net" in mongo_info.get("uri", "")
+            target_str = "MongoDB Atlas" if is_atlas else "local MongoDB (`mongodb://localhost:27017/`)"
             st.warning(
-                f"⚠️ **MongoDB is offline or unreachable.** Prediction history cannot be retrieved while `mongodb://localhost:27017/` is offline.\n\n"
+                f"⚠️ **MongoDB is offline or unreachable.** Prediction history cannot be retrieved while {target_str} is offline.\n\n"
                 f"**Error detail:** `{mongo_err}`\n\n"
-                f"Start your local MongoDB instance (e.g. `net start MongoDB`) and click **Retry Connection** below."
+                f"Verify your network or connection string, then click **Retry Connection** below."
             )
             if st.button("🔄 Retry MongoDB Connection", key="retry_mongo_hist"):
                 get_cached_mongo_status.clear()

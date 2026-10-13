@@ -34,6 +34,59 @@ SHIPMENTS_COLLECTION = "shipments"
 PREDICTIONS_COLLECTION = "risk_predictions"
 
 
+def get_configured_mongo_uri(uri: Optional[str] = None) -> str:
+    """
+    Resolves the MongoDB connection URI in order of priority:
+    1. An explicitly provided remote or non-default URI (e.g. mongodb+srv:// or custom port).
+    2. Streamlit Cloud Secrets: st.secrets["MONGODB_URI"] (if configured).
+    3. Environment variable: os.getenv("MONGODB_URI").
+    4. Explicit uri if provided (e.g. local loopback).
+    5. Default local MongoDB URI: DEFAULT_MONGO_URI (mongodb://localhost:27017/).
+    """
+    # 1. If caller explicitly passed a non-loopback URI, respect it
+    if uri and ("localhost" not in uri) and ("127.0.0.1" not in uri):
+        return uri.strip()
+
+    # 2. Check Streamlit secrets first (for Streamlit Community Cloud or local .streamlit/secrets.toml)
+    try:
+        import streamlit as _st
+        if hasattr(_st, "secrets") and "MONGODB_URI" in _st.secrets:
+            secret_uri = _st.secrets["MONGODB_URI"]
+            if secret_uri and str(secret_uri).strip():
+                return str(secret_uri).strip()
+    except Exception:
+        pass
+
+    # 3. Check environment variable
+    env_uri = os.getenv("MONGODB_URI")
+    if env_uri and env_uri.strip():
+        return env_uri.strip()
+
+    # 4. If caller provided an explicit URI (even loopback), return it
+    if uri and uri.strip():
+        return uri.strip()
+
+    return DEFAULT_MONGO_URI
+
+
+def get_configured_db_name(db_name: Optional[str] = None) -> str:
+    """Resolves the database name from argument, Streamlit secrets, environment, or default."""
+    if db_name and db_name.strip():
+        return db_name.strip()
+    try:
+        import streamlit as _st
+        if hasattr(_st, "secrets") and "MONGODB_DATABASE" in _st.secrets:
+            secret_db = _st.secrets["MONGODB_DATABASE"]
+            if secret_db and str(secret_db).strip():
+                return str(secret_db).strip()
+    except Exception:
+        pass
+    env_db = os.getenv("MONGODB_DATABASE")
+    if env_db and env_db.strip():
+        return env_db.strip()
+    return DEFAULT_DB_NAME
+
+
 def is_cloud_environment() -> bool:
     """
     Detects if running on Streamlit Community Cloud or remote container environment.
@@ -73,26 +126,18 @@ def is_cloud_environment() -> bool:
 def is_mongo_persistence_disabled(uri: Optional[str] = None) -> bool:
     """
     Determines if MongoDB persistence should be gracefully disabled.
-    In cloud deployment with local loopback (localhost/127.0.0.1) URI and no remote MongoDB configured,
-    persistence is gracefully disabled without connection errors or timeouts.
-    When running locally, returns False so local MongoDB saving remains fully enabled.
+    Only disabled in cloud deployment when the resolved URI is localhost/127.0.0.1
+    and NO remote MongoDB URI (such as Atlas in st.secrets['MONGODB_URI']) is configured.
+    When running locally or when a remote MongoDB Atlas URI is configured, returns False.
     """
-    target_uri = uri or os.getenv("MONGODB_URI")
-    if not target_uri:
-        try:
-            import streamlit as _st
-            if hasattr(_st, "secrets") and "MONGODB_URI" in _st.secrets:
-                target_uri = _st.secrets["MONGODB_URI"]
-        except Exception:
-            pass
+    target_uri = get_configured_mongo_uri(uri)
 
-    target_uri = target_uri or DEFAULT_MONGO_URI
-
-    # If it is a remote cluster URI (e.g. Atlas mongodb+srv://), persistence is not disabled
+    # If it is a remote cluster URI (e.g. Atlas mongodb+srv://), persistence is NOT disabled
     is_loopback = ("localhost" in target_uri) or ("127.0.0.1" in target_uri)
     if is_cloud_environment() and is_loopback:
         return True
     return False
+
 
 
 def sanitize_for_mongo(val: Any) -> Any:
@@ -131,11 +176,11 @@ def get_candidate_uris(uri: str) -> List[str]:
     return candidates
 
 
-def get_mongo_client(uri: Optional[str] = None, timeout_ms: int = 2000):
-    """Returns a cached MongoClient instance with low serverSelectionTimeoutMS for responsive fallback."""
+def get_mongo_client(uri: Optional[str] = None, timeout_ms: int = 4000):
+    """Returns a cached MongoClient instance with serverSelectionTimeoutMS for responsive fallback."""
     if not PYMONGO_AVAILABLE:
         return None
-    uri = uri or DEFAULT_MONGO_URI
+    uri = get_configured_mongo_uri(uri)
     cache_key = (uri, timeout_ms)
     client = _CLIENTS.get(cache_key)
     if client is not None:
@@ -152,7 +197,17 @@ def get_mongo_client(uri: Optional[str] = None, timeout_ms: int = 2000):
     candidates = get_candidate_uris(uri)
     for cand in candidates:
         try:
-            new_client = pymongo.MongoClient(cand, serverSelectionTimeoutMS=timeout_ms, connectTimeoutMS=timeout_ms)
+            kwargs = {
+                "serverSelectionTimeoutMS": timeout_ms,
+                "connectTimeoutMS": timeout_ms,
+            }
+            if ("mongodb+srv://" in cand or "ssl=true" in cand.lower() or "tls=true" in cand.lower()):
+                try:
+                    import certifi
+                    kwargs["tlsCAFile"] = certifi.where()
+                except Exception:
+                    pass
+            new_client = pymongo.MongoClient(cand, **kwargs)
             new_client.admin.command("ping")
             _CLIENTS[cache_key] = new_client
             return new_client
@@ -179,7 +234,7 @@ def close_mongo_clients():
 def check_mongo_connection(
     uri: Optional[str] = None,
     db_name: Optional[str] = None,
-    timeout_ms: int = 2000,
+    timeout_ms: int = 4000,
 ) -> Tuple[bool, Dict[str, Any], Optional[str]]:
     """
     Checks MongoDB connectivity and returns (is_connected, info_dict, error_message).
@@ -188,13 +243,13 @@ def check_mongo_connection(
     if not PYMONGO_AVAILABLE:
         return False, {}, "pymongo package is not installed."
 
-    uri = uri or DEFAULT_MONGO_URI
-    db_name = db_name or DEFAULT_DB_NAME
+    resolved_uri = get_configured_mongo_uri(uri)
+    resolved_db = get_configured_db_name(db_name)
 
     if is_mongo_persistence_disabled(uri):
         info = {
             "uri": "mongodb://localhost:27017/ (disabled in cloud)",
-            "database": db_name,
+            "database": resolved_db,
             "status": "Disabled (Streamlit Cloud Mode)",
             "cloud_mode": True,
             "collections": [],
@@ -204,9 +259,9 @@ def check_mongo_connection(
         }
         return False, info, None
 
-    db, err = get_database_with_error(uri, db_name, timeout_ms=timeout_ms)
+    db, err = get_database_with_error(resolved_uri, resolved_db, timeout_ms=timeout_ms)
     if db is None:
-        return False, {"uri": uri, "database": db_name, "status": "Offline", "cloud_mode": False}, err or "Server is unreachable."
+        return False, {"uri": resolved_uri, "database": resolved_db, "status": "Offline", "cloud_mode": False}, err or "Server is unreachable."
 
     try:
         client = db.client
@@ -217,34 +272,35 @@ def check_mongo_connection(
         shipments_count = db[SHIPMENTS_COLLECTION].count_documents({}) if SHIPMENTS_COLLECTION in collections else 0
         predictions_count = db[PREDICTIONS_COLLECTION].count_documents({}) if PREDICTIONS_COLLECTION in collections else 0
 
+        is_atlas = ("mongodb+srv://" in resolved_uri) or ("mongodb.net" in resolved_uri)
         info = {
-            "uri": uri,
-            "database": db_name,
+            "uri": resolved_uri,
+            "database": resolved_db,
             "version": server_info.get("version", "unknown"),
             "collections": collections,
             "shipments_count": shipments_count,
             "predictions_count": predictions_count,
-            "status": "Connected",
+            "status": "Connected (Atlas)" if is_atlas else "Connected",
             "cloud_mode": False,
         }
         return True, info, None
     except Exception as e:
-        return False, {"uri": uri, "database": db_name, "status": "Offline", "cloud_mode": False}, str(e)
+        return False, {"uri": resolved_uri, "database": resolved_db, "status": "Offline", "cloud_mode": False}, str(e)
 
 
 def get_database_with_error(
     uri: Optional[str] = None,
     db_name: Optional[str] = None,
-    timeout_ms: int = 2000,
+    timeout_ms: int = 4000,
 ) -> Tuple[Optional[Any], Optional[str]]:
     """Returns the database handle and error message if unavailable."""
     if not PYMONGO_AVAILABLE:
         return None, "pymongo package is not installed."
-    uri = uri or DEFAULT_MONGO_URI
-    db_name = db_name or DEFAULT_DB_NAME
+    uri = get_configured_mongo_uri(uri)
+    db_name = get_configured_db_name(db_name)
 
     if is_mongo_persistence_disabled(uri):
-        return None, "MongoDB persistence is gracefully disabled in Streamlit Cloud."
+        return None, "MongoDB persistence is gracefully disabled in Streamlit Cloud (no remote MONGODB_URI configured)."
 
     candidates = get_candidate_uris(uri)
     last_err = None
@@ -256,7 +312,14 @@ def get_database_with_error(
             if client is None:
                 continue
             client.admin.command("ping")
-            return client[db_name], None
+            target_db = db_name
+            try:
+                def_db = client.get_default_database()
+                if def_db is not None and def_db.name and (not db_name or db_name == DEFAULT_DB_NAME):
+                    target_db = def_db.name
+            except Exception:
+                pass
+            return client[target_db], None
         except Exception as e:
             last_err = e
             failed_client = _CLIENTS.pop(cache_key, None)
@@ -279,7 +342,7 @@ def get_database_with_error(
     return None, err_str
 
 
-def get_database(uri: Optional[str] = None, db_name: Optional[str] = None, timeout_ms: int = 2000):
+def get_database(uri: Optional[str] = None, db_name: Optional[str] = None, timeout_ms: int = 4000):
     """Returns the database handle if connected, or None if unavailable."""
     db, _ = get_database_with_error(uri, db_name, timeout_ms=timeout_ms)
     return db
@@ -290,12 +353,15 @@ def save_shipment(
     uri: Optional[str] = None,
     db_name: Optional[str] = None,
     status: Optional[str] = None,
-    timeout_ms: int = 2000,
+    timeout_ms: int = 4000,
 ) -> Dict[str, Any]:
     """
     Saves or updates an actual shipment record in the 'shipments' collection.
     Upserts by shipment_id / Shipment_ID if present.
     """
+    uri = get_configured_mongo_uri(uri)
+    db_name = get_configured_db_name(db_name)
+
     if is_mongo_persistence_disabled(uri):
         sid = shipment_data.get("shipment_id") or shipment_data.get("Shipment_ID", "UNKNOWN")
         return {
@@ -303,7 +369,7 @@ def save_shipment(
             "cloud_mode": True,
             "disabled": True,
             "shipment_id": sid,
-            "message": "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting.",
+            "message": "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting (no remote MONGODB_URI configured).",
         }
 
     db, conn_err = get_database_with_error(uri, db_name, timeout_ms=timeout_ms)
@@ -353,7 +419,7 @@ def save_risk_prediction(
     uri: Optional[str] = None,
     db_name: Optional[str] = None,
     prevent_duplicates: bool = True,
-    timeout_ms: int = 2000,
+    timeout_ms: int = 4000,
 ) -> Dict[str, Any]:
     """
     Saves a real ML prediction result into the 'risk_predictions' collection.
@@ -361,8 +427,8 @@ def save_risk_prediction(
     Supports duplicate prevention via submission_hash matching if prevent_duplicates=True.
     Verifies the connection and actual insert_one() execution.
     """
-    uri = uri or DEFAULT_MONGO_URI
-    db_name = db_name or DEFAULT_DB_NAME
+    uri = get_configured_mongo_uri(uri)
+    db_name = get_configured_db_name(db_name)
 
     if is_mongo_persistence_disabled(uri):
         sid = prediction_data.get("shipment_id") or prediction_data.get("Shipment_ID", "UNKNOWN")
@@ -371,7 +437,7 @@ def save_risk_prediction(
             "cloud_mode": True,
             "disabled": True,
             "shipment_id": sid,
-            "message": "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting. Prediction was computed live in-memory.",
+            "message": "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting (no remote MONGODB_URI configured). Prediction was computed live in-memory.",
         }
 
     db, conn_err = get_database_with_error(uri, db_name, timeout_ms=timeout_ms)
@@ -460,6 +526,8 @@ def get_shipments(
     db_name: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Retrieves saved shipment records from MongoDB."""
+    uri = get_configured_mongo_uri(uri)
+    db_name = get_configured_db_name(db_name)
     if is_mongo_persistence_disabled(uri):
         return []
 
@@ -486,6 +554,8 @@ def get_risk_predictions(
     db_name: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Retrieves saved ML prediction records from MongoDB."""
+    uri = get_configured_mongo_uri(uri)
+    db_name = get_configured_db_name(db_name)
     if is_mongo_persistence_disabled(uri):
         return []
 
@@ -511,13 +581,15 @@ def bulk_save_shipments(
     db_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Bulk imports or updates shipment records into MongoDB."""
+    uri = get_configured_mongo_uri(uri)
+    db_name = get_configured_db_name(db_name)
     if is_mongo_persistence_disabled(uri):
         return {
             "success": False,
             "cloud_mode": True,
             "disabled": True,
             "count": 0,
-            "message": "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting.",
+            "message": "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting (no remote MONGODB_URI configured).",
         }
 
     db = get_database(uri, db_name)
@@ -566,14 +638,14 @@ def bulk_save_risk_predictions(
     predictions: List[Dict[str, Any]],
     uri: Optional[str] = None,
     db_name: Optional[str] = None,
-    timeout_ms: int = 3000,
+    timeout_ms: int = 4000,
 ) -> Dict[str, Any]:
     """
     Bulk saves ML risk prediction records into the 'risk_predictions' collection.
     Verifies database connection and insert_many() execution.
     """
-    uri = uri or DEFAULT_MONGO_URI
-    db_name = db_name or DEFAULT_DB_NAME
+    uri = get_configured_mongo_uri(uri)
+    db_name = get_configured_db_name(db_name)
 
     if is_mongo_persistence_disabled(uri):
         return {
@@ -581,7 +653,7 @@ def bulk_save_risk_predictions(
             "cloud_mode": True,
             "disabled": True,
             "count": 0,
-            "message": "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting. Predictions were computed live in-memory.",
+            "message": "Streamlit Cloud Mode: MongoDB persistence is disabled for free cloud hosting (no remote MONGODB_URI configured). Predictions were computed live in-memory.",
         }
 
     db, conn_err = get_database_with_error(uri, db_name, timeout_ms=timeout_ms)

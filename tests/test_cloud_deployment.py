@@ -33,6 +33,7 @@ from src.mongo_db import (
     get_shipments,
     get_risk_predictions,
     close_mongo_clients,
+    get_configured_mongo_uri,
 )
 from dashboard.risk_engine import (
     load_artifacts,
@@ -186,6 +187,38 @@ class TestCloudDeployment(unittest.TestCase):
             # Audit prediction history in cloud mode
             audit_res = self.agent.audit_prediction_history()
             self.assertIn("Cloud Deployment Mode", audit_res.summary)
+
+    def test_09_streamlit_secrets_atlas_persistence(self):
+        """Verifies that st.secrets['MONGODB_URI'] enables MongoDB Atlas persistence in cloud."""
+        atlas_uri = "mongodb+srv://admin:pass@supplyguard.cluster0.mongodb.net/SupplyGuardDB?retryWrites=true&w=majority"
+        with patch.dict(os.environ, {"IS_STREAMLIT_CLOUD": "true"}):
+            with patch("streamlit.secrets", {"MONGODB_URI": atlas_uri}):
+                # 1. URI resolution picks up secrets
+                resolved = get_configured_mongo_uri()
+                self.assertEqual(resolved, atlas_uri)
+
+                # 2. Persistence is NOT disabled
+                self.assertFalse(is_mongo_persistence_disabled())
+
+                # 3. Connection check attempts Atlas and does not flag cloud_mode disabled
+                conn, info, err = check_mongo_connection(timeout_ms=100)
+                self.assertFalse(info.get("cloud_mode"))
+
+                # 4. Saving prediction attempts Atlas and does not return cloud_mode bypass
+                pred_payload = {
+                    "shipment_id": "SG02088",
+                    "predicted_risk_level": "High",
+                    "risk_probability": 0.89,
+                    "early_warning_score": 82.5,
+                    "ews_band": "Critical",
+                    "shap_summary": {"top_risk_drivers": [{"factor": "Geo", "shap_value": 0.45}]},
+                    "shipment_inputs": {"Country": "Vietnam", "Lead_Time_Days": 24},
+                    "timestamp": "2026-10-13T00:00:00Z",
+                }
+                save_res = save_risk_prediction(pred_payload, timeout_ms=100)
+                # Should not be disabled or bypassed as cloud_mode
+                self.assertFalse(save_res.get("cloud_mode", False))
+                self.assertFalse(save_res.get("disabled", False))
 
 
 if __name__ == "__main__":
