@@ -21,32 +21,61 @@ import pandas as pd
 
 # Path setup
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
 SRC_DIR = os.path.join(BASE_DIR, "src")
-if SRC_DIR not in sys.path:
-    sys.path.insert(0, SRC_DIR)
+DASHBOARD_DIR = os.path.dirname(os.path.abspath(__file__))
 
-from mongo_db import (
-    get_shipments,
-    get_risk_predictions,
-    save_shipment,
-    save_risk_prediction,
-    check_mongo_connection,
-    sanitize_for_mongo,
-    is_mongo_persistence_disabled,
-)
-from risk_engine import (
-    predict_ml,
-    compute_composite_scores,
-    compute_ews,
-    ews_band,
-    explain,
-    recommend,
-    EWS_WEIGHTS,
-    FRIENDLY_NAMES,
-)
-from shap_engine import compute_local_shap
+for path in [BASE_DIR, SRC_DIR, DASHBOARD_DIR]:
+    if path not in sys.path:
+        sys.path.insert(0, path)
+
+try:
+    from mongo_db import (
+        get_shipments,
+        get_risk_predictions,
+        save_shipment,
+        save_risk_prediction,
+        check_mongo_connection,
+        sanitize_for_mongo,
+        is_mongo_persistence_disabled,
+    )
+except ImportError:
+    from src.mongo_db import (
+        get_shipments,
+        get_risk_predictions,
+        save_shipment,
+        save_risk_prediction,
+        check_mongo_connection,
+        sanitize_for_mongo,
+        is_mongo_persistence_disabled,
+    )
+
+try:
+    from risk_engine import (
+        predict_ml,
+        compute_composite_scores,
+        compute_ews,
+        ews_band,
+        explain,
+        recommend,
+        EWS_WEIGHTS,
+        FRIENDLY_NAMES,
+    )
+except ImportError:
+    from dashboard.risk_engine import (
+        predict_ml,
+        compute_composite_scores,
+        compute_ews,
+        ews_band,
+        explain,
+        recommend,
+        EWS_WEIGHTS,
+        FRIENDLY_NAMES,
+    )
+
+try:
+    from shap_engine import compute_local_shap
+except ImportError:
+    from dashboard.shap_engine import compute_local_shap
 
 
 class AgentResponse:

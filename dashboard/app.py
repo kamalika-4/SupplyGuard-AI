@@ -12,32 +12,78 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(os.path.join(BASE, "src"))
+# Ensure repository root, src, and dashboard module paths are at the top of sys.path
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(CURRENT_DIR)
+SRC_DIR = os.path.join(BASE, "src")
 
-from risk_engine import (
-    load_artifacts, load_xgb_model, compute_composite_scores, compute_ews, ews_band,
-    explain, recommend, predict_ml, EWS_WEIGHTS, FRIENDLY_NAMES,
-    validate_dataset_schema, batch_predict_df, REQUIRED_SHIPMENT_COLUMNS
-)
-from preprocessing import load_raw, preprocess, save_preprocessed, RAW_PATH, PREPROCESSED_PATH
-from agent_engine import SupplyChainDataToActionAgent
+for path in [BASE, SRC_DIR, CURRENT_DIR]:
+    if path not in sys.path:
+        sys.path.insert(0, path)
+
+try:
+    from risk_engine import (
+        load_artifacts, load_xgb_model, compute_composite_scores, compute_ews, ews_band,
+        explain, recommend, predict_ml, EWS_WEIGHTS, FRIENDLY_NAMES,
+        validate_dataset_schema, batch_predict_df, REQUIRED_SHIPMENT_COLUMNS
+    )
+except ImportError:
+    from dashboard.risk_engine import (
+        load_artifacts, load_xgb_model, compute_composite_scores, compute_ews, ews_band,
+        explain, recommend, predict_ml, EWS_WEIGHTS, FRIENDLY_NAMES,
+        validate_dataset_schema, batch_predict_df, REQUIRED_SHIPMENT_COLUMNS
+    )
+
+try:
+    from preprocessing import load_raw, preprocess, save_preprocessed, RAW_PATH, PREPROCESSED_PATH
+except ImportError:
+    from src.preprocessing import load_raw, preprocess, save_preprocessed, RAW_PATH, PREPROCESSED_PATH
+
+try:
+    from agent_engine import SupplyChainDataToActionAgent
+except ImportError:
+    from dashboard.agent_engine import SupplyChainDataToActionAgent
+
 import hashlib
 import json
-from shap_engine import (
-    compute_local_shap, plot_shap_waterfall,
-    compute_global_shap_data, plot_shap_summary_bar,
-    plot_shap_beeswarm_interactive, plot_shap_dependence_interactive
-)
+
+try:
+    from shap_engine import (
+        compute_local_shap, plot_shap_waterfall,
+        compute_global_shap_data, plot_shap_summary_bar,
+        plot_shap_beeswarm_interactive, plot_shap_dependence_interactive
+    )
+except ImportError:
+    from dashboard.shap_engine import (
+        compute_local_shap, plot_shap_waterfall,
+        compute_global_shap_data, plot_shap_summary_bar,
+        plot_shap_beeswarm_interactive, plot_shap_dependence_interactive
+    )
+
 import datetime
-from mongo_db import (
-    check_mongo_connection, save_shipment, save_risk_prediction,
-    get_shipments, get_risk_predictions, bulk_save_shipments,
-    bulk_save_risk_predictions, sanitize_for_mongo,
-    is_cloud_environment, is_mongo_persistence_disabled,
-    get_configured_mongo_uri
-)
+
+try:
+    from mongo_db import (
+        check_mongo_connection, save_shipment, save_risk_prediction,
+        get_shipments, get_risk_predictions, bulk_save_shipments,
+        bulk_save_risk_predictions, sanitize_for_mongo,
+        is_cloud_environment, is_mongo_persistence_disabled,
+        get_configured_mongo_uri
+    )
+except ImportError:
+    from src.mongo_db import (
+        check_mongo_connection, save_shipment, save_risk_prediction,
+        get_shipments, get_risk_predictions, bulk_save_shipments,
+        bulk_save_risk_predictions, sanitize_for_mongo,
+        is_cloud_environment, is_mongo_persistence_disabled,
+        get_configured_mongo_uri
+    )
+
+# Bridge module aliases in sys.modules so imports are consistent across all subcomponents
+if "mongo_db" in sys.modules and "src.mongo_db" not in sys.modules:
+    sys.modules["src.mongo_db"] = sys.modules["mongo_db"]
+elif "src.mongo_db" in sys.modules and "mongo_db" not in sys.modules:
+    sys.modules["mongo_db"] = sys.modules["src.mongo_db"]
 
 DATA_PATH = os.path.join(BASE, "data", "feature_engineered_data.csv")
 MODEL_DIR = os.path.join(BASE, "models")
